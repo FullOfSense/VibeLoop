@@ -27,7 +27,7 @@ A single-device setup is also possible with one dongle and one device, useful fo
 
 | Game | API / Method | Status |
 |---|---|---|
-| Osu! | [Gosumemory](https://github.com/l3lackShark/gosumemory) | 🔜 Planned |
+| Osu! | [tosu](https://github.com/tosuapp/tosu) | ✅ Working |
 | League of Legends | [Live Client API](https://developer.riotgames.com/docs/lol#game-client-api) | 🔜 Planned |
 | Minecraft | Modding framework (Fabric / Forge TBD) | 🔜 Planned |
 
@@ -35,14 +35,18 @@ A single-device setup is also possible with one dongle and one device, useful fo
 
 ## Installation
 
-> ⚠️ **This section is a placeholder.** Installation instructions will be added once the first working integration is complete.
+Each game integration has its own setup guide. See the relevant README for full instructions:
 
-General requirements will likely include:
+- **osu!** → [README_osu.md](README_osu.md)
+- League of Legends → *(coming soon)*
+- Minecraft → *(coming soon)*
 
-- A supported OS (Windows primary, Linux TBD)
-- The Lovense Connect app installed and running
-- Node.js / Python / (language TBD) runtime
+**Shared requirements across all integrations:**
+
+- Python 3 with `buttplug` and `websockets` packages
+- [Intiface Central](https://intiface.com/central) installed and running as the device server
 - A Lovense USB Bluetooth Dongle per machine
+- Your Lovense device(s) connected in Intiface Central before running any script
 
 ---
 
@@ -52,13 +56,15 @@ General requirements will likely include:
 - [x] Repository created
 - [x] README written
 - [x] Hardware received (Hush 2 + 2× USB Dongle, sponsored by Lovense)
-- [ ] Decide on programming language
-- [ ] Set up project structure
+- [x] Decide on programming language (Python)
+- [x] Set up project structure
 
-### Phase 2 — Osu! Integration 🎯 *(target: within 60 days of hardware receipt)*
-- [ ] Connect to Gosumemory websocket
-- [ ] Map hit accuracy and rhythm events to vibration intensity
-- [ ] Test single-device response
+### Phase 2 — Osu! Integration ✅
+- [x] Connect to tosu websocket
+- [x] Map hit judgements and rhythm events to vibration intensity
+- [x] Map fail / pass events to haptic patterns
+- [x] Multi-device support (all Intiface-connected devices vibrate in sync)
+- [x] Test single-device response
 - [ ] Test two-device sync across two machines
 
 ### Phase 3 — League of Legends Integration
@@ -88,6 +94,6 @@ This project is licensed under the [MIT License](LICENSE).
 ## Credits & Acknowledgements
 
 - **[Lovense](https://www.lovense.com)** — hardware sponsor and API provider.
-- **[Gosumemory](https://github.com/l3lackShark/gosumemory)** — Osu! game state reader
+- **[tosu](https://github.com/tosuapp/tosu)** — Osu! game state reader
 - **[Riot Games](https://developer.riotgames.com)** — League of Legends Live Client API
 - Built by [FullOfSense](https://github.com/FullOfSense) — HBO-ICT student, Netherlands
