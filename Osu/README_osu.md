@@ -2,7 +2,7 @@
 
 Haptic feedback for osu! using [tosu](https://github.com/tosuapp/tosu) and Intiface Central.
 
-→ See the [main VibeLoop README](../README.md) for hardware requirements and Intiface Central setup.
+→ See the [main VibeLoop README](../README.md) for hardware requirements, Intiface Central setup, and remote sync instructions.
 
 ---
 
@@ -53,10 +53,19 @@ Start everything in this order:
 1. **Intiface Central** → Start Server → connect toy(s)
 2. **tosu** — `~/tosu/tosu` (Linux) or `tosu.exe` (Windows)
 3. **osu!lazer**
-4. **VibeLoop:**
+4. **VibeLoop** — pick a variant and run it:
 
 ```bash
-python3 vibeloop_osu.py
+# Rewarding — good hits vibrate strongly
+python3 vibeloop_osu_rewarding.py
+
+# Punishing — misses and bad hits are emphasised
+python3 vibeloop_osu_punishing.py
+```
+
+**With remote sync (host mode):**
+```bash
+python3 vibeloop_osu_rewarding.py --relay ws://YOUR_SERVER:8765 --room ROOMCODE
 ```
 
 Expected output:
@@ -66,6 +75,12 @@ Expected output:
 [INFO] Using 2 device(s): Lovense Hush, Lovense Lush
 [INFO] Connected to tosu v1!
 [INFO] Connected to tosu v2 (spinner data)!
+[INFO] Hosting room: ROOMCODE | Clients connected: 0
+```
+
+Or use the **GUI launcher** from the repo root:
+```bash
+python3 vibeloop_gui.py
 ```
 
 ---
@@ -74,7 +89,7 @@ Expected output:
 
 ### Hit Judgements
 
-Each hit fires a short pulse. Better judgements = stronger and longer pulses.
+Each hit fires a short pulse. Better judgements = stronger and longer pulses. Intensity snaps up instantly on each hit, then smoothly decays back to idle.
 
 | Judgement | Intensity | Pulse Duration |
 |---|---|---|
@@ -84,15 +99,13 @@ Each hit fires a short pulse. Better judgements = stronger and longer pulses.
 | Meh 50 | 7% | 0.07s |
 | Miss | 75% | 0.30s |
 
-Intensity snaps up instantly on each hit, then smoothly decays back to idle.
-
 ### Map Events
 
 | Event | Effect |
 |---|---|
-| Map failed (collapse animation) | 100% for 3 seconds |
-| Map passed (result screen) | Random bursts for 6 seconds, strength scaled to accuracy |
-| Escape / quit early | No vibration |
+| Map failed (collapse animation only) | 100% for 3 seconds |
+| Map passed (result screen, state 2→7) | Random bursts for 6 seconds, strength scaled to accuracy |
+| Escape / quit early (state 2→5) | No vibration |
 | In menus / idle | Vibration off |
 
 ### Win Intensity by Accuracy
@@ -107,9 +120,20 @@ Intensity snaps up instantly on each hit, then smoothly decays back to idle.
 
 ---
 
+## Variants
+
+| File | Style |
+|---|---|
+| `vibeloop_osu_rewarding.py` | Good hits produce strong vibration. Misses still punish but positives dominate. |
+| `vibeloop_osu_punishing.py` | Misses and 50s vibrate strongly. Good hits are silent. |
+
+Both variants support `--relay`, `--room`, and `--password` for remote sync.
+
+---
+
 ## Tuning
 
-Edit the constants near the top of `vibeloop_osu.py`:
+Edit the constants near the top of either script:
 
 ```python
 # Intensity levels (0.0–1.0)
@@ -134,13 +158,6 @@ SMOOTH_DOWN = 0.35
 WIN_DURATION = 6.0
 ```
 
-There are two pre-tuned variants included:
-
-| File | Style |
-|---|---|
-| `vibeloop_osu.py` | Rewarding — good hits produce strong vibration |
-| `vibeloop_osu_punishing.py` | Punishing — misses and bad hits are emphasised |
-
 ---
 
 ## Troubleshooting
@@ -153,6 +170,12 @@ There are two pre-tuned variants included:
 **No vibration during gameplay**
 - Make sure you are inside an active map, not the song select menu
 - VibeLoop logs map events (pass, fail) at INFO level in the terminal
+
+**Fail triggers on Escape**
+- This is fixed — fail only triggers when `gameplay.failed` flips true in the v2 API (the collapse animation), not on escape or menu exit
+
+**Win triggers when not playing**
+- This is fixed — win only triggers on state transition `2→7` (result screen), not `2→5` (escape)
 
 **Test tosu connection manually:**
 ```bash

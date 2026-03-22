@@ -22,7 +22,11 @@ import json
 import time
 import logging
 import sys
+import os
 from dataclasses import dataclass
+
+# Allow importing vibeloop_host from the parent directory
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
 from buttplug import ButtplugClient, DeviceOutputCommand, OutputType
 
@@ -318,7 +322,17 @@ async def vibration_loop(devices: list, intensity_ref: list):
 
 # ─── Main ────────────────────────────────────────────────────────────────────
 
+def parse_args():
+    import argparse
+    parser = argparse.ArgumentParser(description="VibeLoop — Osu! haptic integration")
+    parser.add_argument("--relay",    default=None, help="Relay server WebSocket URL (optional)")
+    parser.add_argument("--room",     default=None, help="Room code for relay")
+    parser.add_argument("--password", default=None, help="Room password for relay")
+    return parser.parse_args()
+
+
 async def main():
+    args = parse_args()
     log.info("=== VibeLoop — Osu! x Hush 2 ===")
 
     client = ButtplugClient("VibeLoop")
@@ -370,12 +384,21 @@ async def main():
     engine        = HapticEngine()
     intensity_ref = [0.0]
 
+    tasks = [
+        tosu_v1_loop(engine, intensity_ref),
+        tosu_v2_loop(engine),
+        vibration_loop(devices, intensity_ref),
+    ]
+
+    if args.relay and args.room:
+        from vibeloop_host import relay_loop
+        log.info(f"Relay enabled → {args.relay} | Room: {args.room.upper()}")
+        tasks.append(relay_loop(args.relay, args.room, args.password, intensity_ref))
+    else:
+        log.info("Running locally (no relay). Use --relay / --room to enable remote sync.")
+
     try:
-        await asyncio.gather(
-            tosu_v1_loop(engine, intensity_ref),
-            tosu_v2_loop(engine),
-            vibration_loop(devices, intensity_ref),
-        )
+        await asyncio.gather(*tasks)
     except KeyboardInterrupt:
         log.info("Shutting down...")
     finally:
