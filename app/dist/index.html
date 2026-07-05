@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VibeLoop</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <h1>VibeLoop</h1>
+    <p class="tagline">real-time haptic feedback for games</p>
+  </header>
+
+  <main>
+    <!-- Toys -->
+    <section class="card" id="toy-card">
+      <div class="row">
+        <span class="dot" id="toy-dot"></span>
+        <span id="toy-summary">Starting toy engine…</span>
+      </div>
+      <div id="device-list" class="chips"></div>
+      <div class="row gap">
+        <button class="ghost" id="btn-test">Test buzz</button>
+        <button class="ghost" id="btn-rescan">Rescan</button>
+      </div>
+    </section>
+
+    <!-- Setup -->
+    <section class="card" id="setup">
+      <div class="tabs" id="mode-tabs">
+        <button class="tab active" data-mode="solo">🎮 SOLO</button>
+        <button class="tab" data-mode="host">📡 HOST</button>
+        <button class="tab" data-mode="join">💞 JOIN</button>
+      </div>
+      <p class="mode-explain" id="mode-explain"></p>
+
+      <div id="field-room" class="field hidden">
+        <label id="room-label" for="room">YOUR ROOM NAME</label>
+        <input id="room" type="text" maxlength="32" autocomplete="off" placeholder="" />
+      </div>
+
+      <div id="field-password" class="field hidden">
+        <label id="password-label" for="password">ROOM PASSWORD</label>
+        <div class="input-eye">
+          <input id="password" type="password" autocomplete="off" placeholder="" />
+          <button class="eye" id="eye-password" title="Show / hide">👁</button>
+        </div>
+      </div>
+
+      <div id="field-mod" class="field">
+        <label for="mod">GAME MOD</label>
+        <div class="row gap">
+          <select id="mod"></select>
+          <button class="ghost" id="btn-mods-folder" title="Open the mods folder">📂</button>
+        </div>
+        <p class="mod-desc" id="mod-desc"></p>
+        <p class="mod-setup" id="mod-setup"></p>
+      </div>
+
+      <button class="start" id="btn-start">START</button>
+    </section>
+
+    <!-- Running -->
+    <section class="card hidden" id="running">
+      <div class="row spread">
+        <span class="mode-label" id="mode-label">SOLO</span>
+        <span id="viewers" class="viewers hidden">● 0 viewers</span>
+      </div>
+
+      <!-- Share card (host only) -->
+      <div id="share-card" class="share hidden">
+        <div class="share-title">SHARE WITH YOUR VIEWERS</div>
+        <div class="share-row">
+          <span class="share-key">Room</span>
+          <span class="share-val" id="share-room"></span>
+        </div>
+        <div class="share-row" id="share-pw-row">
+          <span class="share-key">Password</span>
+          <span class="share-val" id="share-password">••••••••</span>
+          <button class="eye" id="eye-share" title="Show / hide">👁</button>
+        </div>
+        <button class="ghost" id="btn-copy">Copy details</button>
+      </div>
+
+      <div class="meter"><div class="meter-fill" id="meter-fill"></div></div>
+      <div class="meter-value" id="meter-value">0%</div>
+      <p class="status" id="status">Ready.</p>
+      <button class="stop" id="btn-stop">STOP</button>
+    </section>
+
+    <!-- Log -->
+    <details class="card log-card">
+      <summary>Log</summary>
+      <pre id="log"></pre>
+    </details>
+  </main>
+
+  <footer>
+    <span id="engine-label"></span>
+  </footer>
+
+  <script src="main.js"></script>
+</body>
+</html>

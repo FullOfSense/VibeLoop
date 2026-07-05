@@ -1,4 +1,10 @@
-# VibeLoop — osu! Integration
+# VibeLoop — osu! Integration (legacy Python prototype)
+
+> ⚠️ **Superseded.** The osu! integration now ships inside the
+> [VibeLoop desktop app](../app/) as Lua mods
+> ([`osu_rewarding.lua`](../app/mods/osu_rewarding.lua) /
+> [`osu_punishing.lua`](../app/mods/osu_punishing.lua)) — no Python setup
+> needed. These scripts are kept for reference.
 
 Haptic feedback for osu! using [tosu](https://github.com/tosuapp/tosu) and Intiface Central.
 

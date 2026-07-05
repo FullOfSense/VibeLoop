@@ -1,0 +1,28 @@
+[package]
+name = "vibeloop"
+version = "0.1.0"
+description = "VibeLoop — game-driven haptics with shared sessions"
+edition = "2021"
+
+[features]
+default = ["engine"]
+# Embedded toy engine. Disable only for CI type-checks on machines without
+# Bluetooth system headers.
+engine = ["vibeloop-core/engine"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+vibeloop-core = { path = "../core" }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[lib]
+name = "vibeloop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]

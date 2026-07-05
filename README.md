@@ -1,173 +1,115 @@
 # VibeLoop
 
-> Real-time haptic feedback for Lovense devices, driven by in-game events.
+> Feel your game. Share the feeling.
 
-VibeLoop is an open source personal project that maps live game state data to vibration patterns across one or more Lovense devices simultaneously. The goal is a shared, immersive experience between two users — each on their own machine, each with their own device — reacting to the same game in real time. The architecture supports both local and remote setups, making it naturally applicable to long-distance use.
+VibeLoop is a cross-platform desktop app (Windows / macOS / Linux) that turns
+live game events into haptic feedback on Bluetooth toys — and lets anyone on
+the internet feel the same feedback in real time. Built for streamers: host a
+room under your name, viewers join with one click, everyone's toy reacts to
+your gameplay together.
 
-This project is built on top of [Intiface Central](https://intiface.com/central) / [Buttplug.io](https://buttplug.io) and is intended as an honest, transparent record of what works, what doesn't, and where the stack holds up under unconventional real-world use.
-
----
-
-## Hardware Requirements
-
-To run VibeLoop in its intended two-device configuration you will need:
-
-- **2× Lovense USB Bluetooth Dongle** — one per machine, required for device communication
-- **Lovense Lush 3** — first device, connected to machine 1
-- **Lovense Hush 2 (1.75")** — second device, connected to machine 2
-- Two computers running the game integrations simultaneously
-
-A single-device setup is also possible with one dongle and one device, useful for testing individual game integrations before moving to multi-device sync.
+Built on [buttplug.io](https://buttplug.io) for device support and
+[iroh](https://iroh.computer) for peer-to-peer networking. Sponsored with
+hardware by [Lovense](https://www.lovense.com).
 
 ---
 
-## Supported Games & APIs
+## How it works
 
-| Game | API / Method | Status |
+```
+your game ──▶ mod (one Lua file) ──▶ intensity engine ──▶ your toy
+                                          │
+                                          ▼  P2P, end-to-end encrypted
+                                    viewers' apps ──▶ their toys
+```
+
+- **One screen, three modes.** 🎮 **SOLO** — feel your own game.
+  📡 **HOST** — pick a room name, share it, stream the feeling.
+  💞 **JOIN** — type the host's room name and feel what they feel.
+- **No server, no port forwarding, no account.** Connections go directly
+  between host and viewer (NAT hole-punching, public relays as automatic
+  fallback). Your room name *is* the address.
+- **Optional password = private room.** The password is never transmitted —
+  it's part of the room's cryptographic identity, so a wrong password simply
+  cannot connect. Details in [app/SECURITY.md](app/SECURITY.md).
+- **Toys just work.** The app embeds the Intiface engine (Bluetooth LE,
+  Lovense USB dongle, Lovense Connect, serial, HID). Already running Intiface
+  Central? VibeLoop detects and uses it instead. Every toy buttplug.io
+  supports — Lovense, We-Vibe, Kiiroo, and hundreds more.
+- **Fail-safe by design.** Every exit path — stop, crash, lost connection,
+  app close — zeroes all devices. Intensity is clamped 0–100 % everywhere.
+
+## Supported games
+
+| Game | Status | How |
 |---|---|---|
-| osu! | [tosu](https://github.com/tosuapp/tosu) | ✅ Working |
-| League of Legends | [Live Client API](https://developer.riotgames.com/docs/lol#game-client-api) | 🔜 Planned |
-| Minecraft | Modding framework (Fabric / Forge TBD) | 🔜 Planned |
+| osu! (stable & lazer) | ✅ Ships with the app | [tosu](https://github.com/tosuapp/tosu) — two styles: **Rewarding** (every hit buzzes, better = stronger) and **Punishing** (good play = silence, mistakes buzz) |
+| League of Legends | 🔜 Planned | Live Client API |
+| Minecraft | 🔜 Planned | Fabric/Forge mod |
 
-Each integration has its own README with setup instructions and haptic mapping details.
+Adding a game = dropping **one Lua file** into the mods folder (📂 button in
+the app). No compiler, no packaging. Full API reference:
+[app/mods/README.md](app/mods/README.md).
 
----
+## Getting started
 
-## Installation
+1. **Install** — grab the installer for your OS from the Releases page
+   (`.exe` / `.dmg` / `.AppImage` / `.deb`), or build from source (below).
+2. **Turn your toy on.** It appears in the app automatically — use
+   *Test buzz* to confirm.
+3. **Pick a mode and press start.** For osu!, run
+   [tosu](https://github.com/tosuapp/tosu) alongside the game — the app shows
+   exactly what it's waiting for.
 
-Each game integration has its own setup guide. See the relevant README for full instructions:
+## Building from source
 
-- **osu!** → [Osu/README_osu.md](Osu/README_osu.md)
-- League of Legends → *(coming soon)*
-- Minecraft → *(coming soon)*
+Rust stable is the only hard requirement. On Linux additionally:
 
-**Shared requirements across all integrations:**
-
-- Python 3 with `buttplug` and `websockets` packages
-- [Intiface Central](https://intiface.com/central) installed and running as the device server
-- A Lovense USB Bluetooth Dongle per machine
-- Your Lovense device(s) connected in Intiface Central before running any script
-
----
-
-## Remote Sync
-
-VibeLoop supports remote play — one machine runs the game and broadcasts haptic intensity, while any number of people around the world connect and feel the same feedback on their own devices.
-
-### How it works
-
-```
-Your machine                    Cloud / Local              Friend's machine
-─────────────────               ───────────────            ────────────────
-osu! + vibeloop_osu.py   →→→   vibeloop_server.py  →→→   vibeloop_client.py
-     (host mode)               (relay server)                  (client)
-          │                                                        │
-       Hush 2                                                   Lush 3
+```bash
+sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev \
+  librsvg2-dev libdbus-1-dev libudev-dev build-essential pkg-config
 ```
 
-### Files
+```bash
+cd app
+cargo run -p vibeloop                 # run the app
+cargo test -p vibeloop-core           # test suite (no hardware needed)
+cargo test -p vibeloop-core -- --ignored   # live P2P tests (needs internet)
+```
 
-| File | Role |
+The test suite covers the whole product without hardware: a mock game feeds
+the real osu! mod, a mock toy speaks the real buttplug protocol, and the P2P
+tests host + join a real room over the live discovery network.
+Developer docs: [app/README.md](app/README.md).
+
+## Repository layout
+
+| Path | What |
 |---|---|
-| `vibeloop_server.py` | Relay server — runs in the cloud or locally |
-| `vibeloop_host.py` | Standalone host broadcaster (imported by game scripts) |
-| `vibeloop_client.py` | Runs on the viewer's machine, drives their local device |
-
-### Usage
-
-**Start the relay server (once):**
-```bash
-python3 vibeloop_server.py
-```
-
-**Host a room (your machine, with game running):**
-```bash
-python3 Osu/vibeloop_osu_rewarding.py --relay ws://YOUR_SERVER:8765 --room ROOMCODE
-```
-
-**Join as a client (friend's machine):**
-```bash
-python3 vibeloop_client.py --server ws://YOUR_SERVER:8765 --room ROOMCODE
-```
-
-Rooms support an optional password:
-```bash
---password secret
-```
-
-### GUI Launcher
-
-A graphical launcher is included for convenience:
-```bash
-python3 vibeloop_gui.py
-```
-
-Requires: `pip install customtkinter`
-
-The GUI lets you select a game, choose local or host/client mode, enter relay details, and launch with one click. Live logs are streamed directly into the interface.
-
----
+| [`app/`](app/) | **The VibeLoop desktop app** (Rust + Tauri 2, Lua mods) |
+| [`app/mods/`](app/mods/) | Game mods + modding API reference |
+| `vibeloop_*.py`, [`Osu/`](Osu/) | Original Python prototype (2025) — kept for reference, superseded by `app/` |
 
 ## Roadmap
 
-### Phase 1 — Setup & Documentation ✅
-- [x] Repository created
-- [x] README written
-- [x] Hardware received (Hush 2 + Lush 3 + 2× USB Dongle, sponsored by Lovense)
-- [x] Decide on programming language (Python)
-- [x] Set up project structure
+- [x] Python prototype: osu! → Lovense via Intiface Central, relay-server sync
+- [x] **v2 desktop app**: Tauri + Rust, all platforms
+- [x] Serverless P2P sessions (username = room, cryptographic passwords)
+- [x] Embedded toy engine + Intiface Central auto-detection
+- [x] Single-file Lua mod system, osu! mods ported
+- [x] CI: installers for Windows / macOS / Linux on every tagged release
+- [ ] League of Legends mod
+- [ ] Minecraft mod
+- [ ] Code signing (Windows / macOS) to remove unsigned-app warnings
+- [ ] Per-viewer intensity scaling & host-side viewer management
 
-### Phase 2 — Osu! Integration ✅
-- [x] Connect to tosu WebSocket
-- [x] Map hit judgements and rhythm events to vibration intensity
-- [x] Map fail / pass events to haptic patterns (collapse animation detection)
-- [x] Win intensity scaled to final accuracy
-- [x] Multi-device support (all Intiface-connected devices vibrate in sync)
-- [x] Two variants: Rewarding and Punishing
+## License & credits
 
-### Phase 3 — Remote Sync ✅
-- [x] WebSocket relay server with room codes and optional passwords
-- [x] Host mode — broadcasts game intensity to relay
-- [x] Client mode — receives intensity and drives local device
-- [x] Tested locally (Linux host + Windows client, Hush + Lush in sync)
-- [ ] Deploy relay server to cloud (Railway / Render)
-- [ ] Test across internet (two different networks)
+[MIT](LICENSE).
 
-### Phase 4 — GUI Launcher ✅
-- [x] CustomTkinter desktop app
-- [x] Game selector with variant picker
-- [x] Local / Host / Join mode switching
-- [x] Live log output
-- [ ] Client count display in host mode
-
-### Phase 5 — League of Legends Integration
-- [ ] Connect to Live Client API
-- [ ] Map game events (damage, kills, abilities) to vibration patterns
-- [ ] Test single and multi-device behaviour
-
-### Phase 6 — Minecraft Integration
-- [ ] Select modding framework (Fabric or Forge)
-- [ ] Map in-game events (damage, crafting, environment) to vibration patterns
-- [ ] Test single and multi-device behaviour
-
-### Phase 7 — Multi-Device Sync & Refinement
-- [ ] Deploy relay server permanently
-- [ ] Stress test simultaneous two-device, two-machine communication over internet
-- [ ] Document latency, connection stability, and sync reliability findings
-- [ ] Refactor and clean up codebase
-
----
-
-## License
-
-This project is licensed under the [MIT License](LICENSE).
-
----
-
-## Credits & Acknowledgements
-
-- **[Lovense](https://www.lovense.com)** — hardware sponsor. Special thanks to Luca Fuster.
-- **[tosu](https://github.com/tosuapp/tosu)** — osu! game state reader
-- **[Intiface Central](https://intiface.com/central) / [Buttplug.io](https://buttplug.io)** — device communication layer
-- **[Riot Games](https://developer.riotgames.com)** — League of Legends Live Client API
+- **[Lovense](https://www.lovense.com)** — hardware sponsor (special thanks to Luca Fuster)
+- **[buttplug.io](https://buttplug.io) / [Intiface](https://intiface.com)** — device engine (Nonpolynomial Labs)
+- **[iroh](https://iroh.computer)** — P2P connections (n0)
+- **[tosu](https://github.com/tosuapp/tosu)** — osu! game state
+- **[Tauri](https://tauri.app)** — app shell
 - Built by [FullOfSense](https://github.com/FullOfSense) — HBO-ICT student, Netherlands
