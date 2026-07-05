@@ -22,7 +22,7 @@ buttplug = { version = "10", optional = true }
 buttplug_core = { version = "10", optional = true }
 intiface-engine = { version = "4", optional = true, default-features = false }
 iroh = "1"
-tokio-util = "0.7"
+tokio-util = { version = "0.7", features = ["codec"] }
 mlua = { version = "0.11", features = ["lua54", "vendored", "serialize", "send", "error-send"] }
 tokio-tungstenite = "0.29"
 futures-util = "0.3"

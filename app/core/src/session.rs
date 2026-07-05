@@ -17,10 +17,11 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{Context, Result};
+use futures_util::StreamExt;
 use iroh::endpoint::presets;
 use iroh::{Endpoint, EndpointAddr, EndpointId, SecretKey};
-use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::sync::mpsc;
+use tokio_util::codec::{FramedRead, LinesCodec};
 use tokio_util::sync::CancellationToken;
 
 use crate::bus::IntensityBus;
@@ -30,6 +31,11 @@ const KDF_CONTEXT: &str = "vibeloop.app 2026-07 room key v1";
 const PING_INTERVAL: Duration = Duration::from_secs(5);
 /// If nothing (not even a ping) arrives for this long, the link is dead.
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(15);
+/// Protocol lines are ~25 bytes; anything near this cap is garbage, and the
+/// cap keeps a hostile host from growing an unbounded line in viewer memory.
+const MAX_LINE_BYTES: usize = 8 * 1024;
+/// Ceiling on concurrent viewers so a public room can't be task-flooded.
+const MAX_VIEWERS: usize = 256;
 
 /// Events surfaced to the UI layer.
 #[derive(Debug, Clone)]
@@ -147,6 +153,13 @@ pub async fn host(
                     continue;
                 }
             };
+            if viewers.load(Ordering::SeqCst) >= MAX_VIEWERS {
+                conn.close(1u32.into(), b"room full");
+                let _ = accept_events.send(SessionEvent::Log(format!(
+                    "A viewer was turned away — room is full ({MAX_VIEWERS})"
+                )));
+                continue;
+            }
             let viewers = viewers.clone();
             let events = accept_events.clone();
             let cancel = accept_cancel.clone();
@@ -257,24 +270,29 @@ pub async fn join(
             let stream_result: Result<()> = async {
                 let (send, recv) = conn.open_bi().await?;
                 drop(send); // viewer never talks; intensity flows one way
-                let mut lines = BufReader::new(recv).lines();
+                let mut lines =
+                    FramedRead::new(recv, LinesCodec::new_with_max_length(MAX_LINE_BYTES));
                 loop {
                     let line = tokio::select! {
                         _ = task_cancel.cancelled() => return Ok(()),
-                        line = tokio::time::timeout(CLIENT_TIMEOUT, lines.next_line()) => {
+                        line = tokio::time::timeout(CLIENT_TIMEOUT, lines.next()) => {
                             match line {
                                 Err(_) => anyhow::bail!("no data from host for {}s", CLIENT_TIMEOUT.as_secs()),
-                                Ok(l) => l?,
+                                Ok(l) => l,
                             }
                         }
                     };
                     let Some(line) = line else { break };
+                    let line = line.context("bad data from host")?;
                     if let Ok(v) = serde_json::from_str::<serde_json::Value>(&line) {
                         match v.get("t").and_then(|t| t.as_str()) {
                             Some("i") => {
-                                let level =
-                                    v.get("v").and_then(|x| x.as_f64()).unwrap_or(0.0);
-                                bus.set_base(level.clamp(0.0, 1.0));
+                                let level = v
+                                    .get("v")
+                                    .and_then(|x| x.as_f64())
+                                    .unwrap_or(0.0)
+                                    .clamp(0.0, 1.0);
+                                bus.set_base(level);
                                 let _ = events.send(SessionEvent::Intensity(level));
                             }
                             Some("bye") => {

@@ -70,6 +70,8 @@ viewer feels — mods never need to know whether a session is running.
   sender.
 - A Lua runtime error stops the mod safely (intensity zeroed) and shows the
   error in the app. `error("...")` is a legitimate way to bail out.
+- Mods run sandboxed: `math`/`string`/`table`/`utf8` and the `vibe` API only —
+  no `io`, `os`, or `require`. All I/O goes through declared `sources`.
 - Test without the game: point a source at a local WebSocket you feed by
   hand — see `core/tests/mock_e2e.rs` for the pattern.
 

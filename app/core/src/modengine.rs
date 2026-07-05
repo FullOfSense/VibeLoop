@@ -28,7 +28,7 @@ use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result};
 use futures_util::StreamExt;
-use mlua::{Function, Lua, LuaSerdeExt, Table};
+use mlua::{Function, Lua, LuaOptions, LuaSerdeExt, StdLib, Table};
 use serde::Serialize;
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
@@ -138,7 +138,14 @@ pub async fn run_mod(
         .unwrap_or("mod")
         .to_string();
 
-    let lua = Lua::new();
+    // Sandbox: mods get math/string/table/utf8 + the base library only — no
+    // io, no os, no require/package, no debug. A downloaded mod can drive the
+    // vibe API, not the filesystem or shell.
+    let lua = Lua::new_with(
+        StdLib::TABLE | StdLib::STRING | StdLib::MATH | StdLib::UTF8,
+        LuaOptions::default(),
+    )
+    .context("could not create Lua sandbox")?;
     let started = Instant::now();
 
     // ── vibe API ──
@@ -358,6 +365,26 @@ mod tests {
         let result = run_mod(&path, &bus, tx).await;
         assert!(result.is_err());
         bus.shutdown();
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[tokio::test]
+    async fn sandbox_blocks_io_os_and_require() {
+        let dir = std::env::temp_dir().join(format!("vibeloop-sandbox-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        for (name, code) in [
+            ("os.lua", "os.execute('true')"),
+            ("io.lua", "io.open('/etc/passwd')"),
+            ("require.lua", "require('socket')"),
+        ] {
+            let path = dir.join(name);
+            std::fs::write(&path, code).unwrap();
+            let bus = IntensityBus::new();
+            let (tx, _rx) = mpsc::unbounded_channel();
+            let result = run_mod(&path, &bus, tx).await;
+            assert!(result.is_err(), "{name} must be blocked by the sandbox");
+            bus.shutdown();
+        }
         std::fs::remove_dir_all(&dir).unwrap();
     }
 

@@ -28,10 +28,30 @@ from `lowercase(username) + password`. Consequences:
   accounts. If that matters, set a password.
 - Room keys are deterministic: nothing is stored, nothing to lose or leak.
 
+## Game mods
+
+Mods are Lua files, but they run in a sandbox: only the `math`, `string`,
+`table` and `utf8` libraries plus the `vibe` API are available. There is no
+`io`, no `os`, no `require` — a downloaded mod cannot touch your files, run
+programs, or load native code. Its only outputs are vibration levels
+(clamped) and log lines. Game connections (the `sources` list) are opened by
+the app itself, not by mod code.
+
+## Sessions — hardened inputs
+
+- Viewers physically cannot send data to a host — the host never reads from
+  viewer streams, so there is nothing for a malicious viewer to inject.
+- What a viewer receives from a host is parsed defensively: intensity is
+  clamped to 0–1, non-finite numbers are rejected by the bus, protocol lines
+  are capped at 8 KB (a hostile host can't balloon viewer memory), and
+  unknown message types are ignored.
+- A room accepts at most 256 concurrent viewers, so a public room can't be
+  flooded into resource exhaustion.
+
 ## Device safety
 
 - Intensity is clamped to 0–1 at every boundary (mod output, network input,
-  device command).
+  device command); NaN/infinite values are discarded at the bus.
 - Every stop path — Stop button, session end, host disconnect, mod crash,
   app exit — zeroes the bus and sends a stop-all to every device. Losing the
   host freezes nothing at high intensity: viewers zero out within seconds

@@ -93,13 +93,21 @@ impl IntensityBus {
     }
 
     /// Sets the sustained intensity level (0.0–1.0). Stays until changed.
+    /// Non-finite values (NaN/inf, e.g. from a buggy mod) are ignored — NaN
+    /// survives `clamp` and would poison the smoothing math and the devices.
     pub fn set_base(&self, level: f64) {
+        if !level.is_finite() {
+            return;
+        }
         let mut s = self.state.lock().expect("bus lock poisoned");
         s.base = level.clamp(0.0, 1.0);
     }
 
     /// Fires a one-shot pulse; replaces any pulse still running.
     pub fn pulse(&self, level: f64, seconds: f64) {
+        if !level.is_finite() || !seconds.is_finite() {
+            return;
+        }
         let mut s = self.state.lock().expect("bus lock poisoned");
         s.pulse_intensity = level.clamp(0.0, 1.0);
         s.pulse_until = Instant::now() + Duration::from_secs_f64(seconds.clamp(0.0, 30.0));
@@ -116,6 +124,9 @@ impl IntensityBus {
 
     /// User safety ceiling, applied after all mixing (1.0 = no cap).
     pub fn set_max(&self, max: f64) {
+        if !max.is_finite() {
+            return;
+        }
         let mut s = self.state.lock().expect("bus lock poisoned");
         s.max = max.clamp(0.0, 1.0);
     }
@@ -166,6 +177,21 @@ mod tests {
         })
         .await
         .expect("never decayed to zero");
+        bus.shutdown();
+    }
+
+    #[tokio::test]
+    async fn non_finite_inputs_are_ignored() {
+        let bus = IntensityBus::new();
+        // None of these may panic (Duration::from_secs_f64(NaN) would) or
+        // poison the bus with NaN.
+        bus.set_base(f64::NAN);
+        bus.pulse(f64::INFINITY, f64::NAN);
+        bus.pulse(0.5, f64::INFINITY);
+        bus.set_max(f64::NAN);
+        tokio::time::sleep(Duration::from_millis(120)).await;
+        let v = *bus.subscribe().borrow();
+        assert!(v.is_finite(), "bus emitted non-finite value {v}");
         bus.shutdown();
     }
 
