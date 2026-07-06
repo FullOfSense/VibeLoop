@@ -1,0 +1,5 @@
+is_global = true
+build_property.RootNamespace = VibeLoop.Repo
+build_property.ProjectDir = /media/patrixonix/HDD/VibeLoop/VibeLoop/app/mods/companions/repo/vibeloop-bridge/
+build_property.EnableComHosting = 
+build_property.EnableGeneratedComInterfaceComImportInterop = 

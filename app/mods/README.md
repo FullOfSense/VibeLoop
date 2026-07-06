@@ -99,3 +99,5 @@ viewer feels — mods never need to know whether a session is running.
 | `team_fortress2.lua` | Team Fortress 2 (`-condebug` launch option, set `MY_NICK` in the file) | Your kills reward (crits extra), your deaths sting |
 | `dont_starve_together.lua` | Don't Starve Together (client bridge in `companions/dst/`) | Hits buzz by health lost, death stings; works on any server |
 | `minecraft.lua` | Minecraft Java + Fabric (prebuilt bridge jar in `companions/minecraft/`) | Damage buzzes by hearts lost, death stings, level-ups reward; any launcher, any server |
+| `repo.lua` | R.E.P.O. (BepInEx + prebuilt dll in `companions/repo/`) | Your damage buzzes, deaths sting, heals tickle, extractions celebrate — teammates' pain ignored |
+| `webfishing.lua` | WEBFISHING (GDWeave + prebuilt pck in `companions/webfishing/`) | Feel the bite the instant a fish strikes; catches and rod level-ups celebrate |

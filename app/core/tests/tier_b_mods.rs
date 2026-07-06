@@ -132,6 +132,32 @@ fn minecraft_reacts_to_bridge_events() {
 }
 
 #[test]
+fn repo_reacts_to_bridge_events() {
+    let src = std::fs::read_to_string(mods_dir().join("repo.lua")).unwrap();
+    let (lua, calls) = load_mod(&src);
+    send(&lua, r#"{"e":"dmg","f":0.3}"#);
+    send(&lua, r#"{"e":"died"}"#);
+    send(&lua, r#"{"e":"heal"}"#);
+    let p = pulses(&calls);
+    assert!(p.iter().any(|v| (0.65..0.75).contains(v)), "damage pulse: {p:?}");
+    assert!(p.iter().any(|v| *v >= 0.9), "death pulse: {p:?}");
+    assert!(p.iter().any(|v| (*v - 0.2).abs() < 0.01), "heal tickle: {p:?}");
+}
+
+#[test]
+fn webfishing_reacts_to_bridge_events() {
+    let src = std::fs::read_to_string(mods_dir().join("webfishing.lua")).unwrap();
+    let (lua, calls) = load_mod(&src);
+    send(&lua, r#"{"e":"bite"}"#);
+    send(&lua, r#"{"e":"catch","n":1}"#);
+    send(&lua, r#"{"e":"levelup","n":12}"#);
+    let p = pulses(&calls);
+    assert!(p.iter().any(|v| (*v - 0.8).abs() < 0.01), "bite pulse: {p:?}");
+    assert!(p.iter().any(|v| (*v - 0.55).abs() < 0.01), "catch pulse: {p:?}");
+    assert!(p.iter().any(|v| (*v - 0.45).abs() < 0.01), "levelup pulse: {p:?}");
+}
+
+#[test]
 fn dst_parses_bridge_markers() {
     let src = std::fs::read_to_string(mods_dir().join("dont_starve_together.lua")).unwrap();
     let (lua, calls) = load_mod(&src);

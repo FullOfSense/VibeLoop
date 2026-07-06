@@ -185,11 +185,12 @@ VibeLoop source; they live under `mods/companions/`.
 | Team Fortress 2 | `-condebug` console.log → `file` | ✅ shipped (launch option only, no mod) |
 | Don't Starve Together | client bridge → client_log.txt → `file` | ✅ shipped (`mods/companions/dst/`) |
 | Minecraft (Java, Fabric) | client bridge → `file` | ✅ shipped (`mods/companions/minecraft/`, prebuilt jar included) |
-| REPO | BepInEx companion → `file` | 🔜 needs the game's assemblies to compile against |
-| Bloons TD 6 | Mod Helper companion → `file` | 🔜 needs the game's assemblies to compile against |
-| Webfishing | GDWeave companion → `file` | 🔜 needs the game's assemblies to compile against |
-| Deep Rock Galactic | no scriptable channel found (UE pak mods can't do I/O) | ⚠️ investigating |
-| Satisfactory | dedicated-server API / SML companion | ⚠️ investigating |
+| R.E.P.O. | BepInEx bridge → `file` | ✅ shipped (`mods/companions/repo/`, prebuilt dll, hooks compiler-verified against the game) |
+| WEBFISHING | GDWeave script bridge → `file` | ✅ shipped (`mods/companions/webfishing/`, prebuilt pck; bite/catch/level-up) |
+| Bloons TD 6 | Mod Helper companion → `file` | 🔜 IL2CPP: launch the game once with MelonLoader/Mod Helper installed, then the bridge can be compiled against the generated interop assemblies |
+| Deep Rock Galactic | no scriptable channel (UE pak mods can't do I/O) | ❌ for now |
+| Satisfactory | pure Unreal; SML mods need a full UE toolchain, dedicated-server API lacks player events | ❌ for now |
+| Far Far West | pure Unreal, no modding framework | ❌ for now |
 | Palworld | dedicated-server REST only | ⚠️ partial at best |
 | Sea of Thieves | none (anti-cheat, no API) | ❌ not moddable safely |
 | Crab Champions | none | ❌ no data channel |
