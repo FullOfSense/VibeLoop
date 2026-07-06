@@ -10,9 +10,8 @@ sources = {
     type = "file",
     paths = {
       "${APPDATA}/Godot/app_userdata/webfishing_2_newver/vibeloop.jsonl",
-      "~/.steam/steam/steamapps/compatdata/3146520/pfx/drive_c/users/steamuser/AppData/Roaming/Godot/app_userdata/webfishing_2_newver/vibeloop.jsonl",
-      "~/.local/share/Steam/steamapps/compatdata/3146520/pfx/drive_c/users/steamuser/AppData/Roaming/Godot/app_userdata/webfishing_2_newver/vibeloop.jsonl",
-      "/media/patrixonix/HDD/SteamLibrary/steamapps/compatdata/3146520/pfx/drive_c/users/steamuser/AppData/Roaming/Godot/app_userdata/webfishing_2_newver/vibeloop.jsonl",
+      -- Proton on Linux: found in whichever Steam library holds the game.
+      "${STEAM_LIBRARIES}/compatdata/3146520/pfx/drive_c/users/steamuser/AppData/Roaming/Godot/app_userdata/webfishing_2_newver/vibeloop.jsonl",
     },
   },
 }

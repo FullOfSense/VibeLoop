@@ -11,9 +11,8 @@ sources = {
     type = "file",
     paths = {
       "${USERPROFILE}/.vibeloop/repo.jsonl",
-      "~/.steam/steam/steamapps/compatdata/3241660/pfx/drive_c/users/steamuser/.vibeloop/repo.jsonl",
-      "~/.local/share/Steam/steamapps/compatdata/3241660/pfx/drive_c/users/steamuser/.vibeloop/repo.jsonl",
-      "/media/patrixonix/HDD/SteamLibrary/steamapps/compatdata/3241660/pfx/drive_c/users/steamuser/.vibeloop/repo.jsonl",
+      -- Proton on Linux: found in whichever Steam library holds the game.
+      "${STEAM_LIBRARIES}/compatdata/3241660/pfx/drive_c/users/steamuser/.vibeloop/repo.jsonl",
     },
   },
 }

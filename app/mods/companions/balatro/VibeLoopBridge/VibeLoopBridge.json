@@ -1,0 +1,9 @@
+{
+  "id": "VibeLoopBridge",
+  "name": "VibeLoop Bridge",
+  "author": ["FullOfSense"],
+  "description": "Streams scoring events to vibeloop.jsonl for VibeLoop haptics.",
+  "prefix": "vibeloop",
+  "main_file": "VibeLoopBridge.lua",
+  "version": "1.0.1"
+}

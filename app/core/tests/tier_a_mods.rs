@@ -73,8 +73,8 @@ async fn tier_a_mods_react_to_fake_games() {
     tokio::time::sleep(Duration::from_millis(300)).await;
 
     // ── War Thunder: fake telemetry on 8111, 6 G pull → sustained buzz ──
-    {
-        let server = tokio::net::TcpListener::bind("127.0.0.1:8111").await.unwrap();
+    // Skipped when the REAL game is running on this machine (it owns 8111).
+    if let Ok(server) = tokio::net::TcpListener::bind("127.0.0.1:8111").await {
         let server_task = tokio::spawn(async move {
             loop {
                 let Ok((mut sock, _)) = server.accept().await else { return };

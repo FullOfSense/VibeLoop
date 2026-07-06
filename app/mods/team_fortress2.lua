@@ -10,11 +10,8 @@ sources = {
     id = "log",
     type = "file",
     paths = {
-      "~/.steam/steam/steamapps/common/Team Fortress 2/tf/console.log",
-      "~/.local/share/Steam/steamapps/common/Team Fortress 2/tf/console.log",
-      "${ProgramFiles(x86)}/Steam/steamapps/common/Team Fortress 2/tf/console.log",
-      "C:/Program Files (x86)/Steam/steamapps/common/Team Fortress 2/tf/console.log",
-      "~/Library/Application Support/Steam/steamapps/common/Team Fortress 2/tf/console.log",
+      -- Found in whichever Steam library holds the game, on any OS/drive.
+      "${STEAM_LIBRARIES}/common/Team Fortress 2/tf/console.log",
     },
   },
 }

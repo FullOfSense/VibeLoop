@@ -10,8 +10,8 @@ sources = {
     type = "file",
     paths = {
       "${APPDATA}/Balatro/vibeloop.jsonl",
-      "~/.steam/steam/steamapps/compatdata/2379780/pfx/drive_c/users/steamuser/AppData/Roaming/Balatro/vibeloop.jsonl",
-      "~/.local/share/Steam/steamapps/compatdata/2379780/pfx/drive_c/users/steamuser/AppData/Roaming/Balatro/vibeloop.jsonl",
+      -- Proton on Linux: found in whichever Steam library holds the game.
+      "${STEAM_LIBRARIES}/compatdata/2379780/pfx/drive_c/users/steamuser/AppData/Roaming/Balatro/vibeloop.jsonl",
       "~/Library/Application Support/Balatro/vibeloop.jsonl",
     },
   },

@@ -158,6 +158,32 @@ fn webfishing_reacts_to_bridge_events() {
 }
 
 #[test]
+fn war_thunder_feels_tank_battles() {
+    // Ground vehicles report valid=false on /state (it's flight telemetry).
+    // The battle feed must still work — regression test for the bug where
+    // every state poll reset feed priming and muted tank battles entirely.
+    let src = std::fs::read_to_string(mods_dir().join("war_thunder.lua")).unwrap();
+    let (lua, calls) = load_mod(&src);
+    let send_to = |source: &str, json: &str| {
+        let value: serde_json::Value = serde_json::from_str(json).unwrap();
+        let on_message: mlua::Function = lua.globals().get("on_message").unwrap();
+        on_message.call::<()>((source, lua.to_value(&value).unwrap())).unwrap();
+    };
+    send_to("state", r#"{"valid":false}"#);
+    // First feed poll mid-battle: backlog, swallowed silently.
+    send_to("feed", r#"{"damage":[{"id":1,"msg":"A destroyed B"}]}"#);
+    send_to("state", r#"{"valid":false}"#);
+    // A new destruction after priming — with valid still false (tank battle).
+    send_to(
+        "feed",
+        r#"{"damage":[{"id":1,"msg":"A destroyed B"},{"id":2,"msg":"C destroyed D"}]}"#,
+    );
+    let p = pulses(&calls);
+    assert_eq!(p.len(), 1, "exactly the new event must pulse: {p:?}");
+    assert!((p[0] - 0.35).abs() < 0.01, "unfiltered destruction pulse: {p:?}");
+}
+
+#[test]
 fn dst_parses_bridge_markers() {
     let src = std::fs::read_to_string(mods_dir().join("dont_starve_together.lua")).unwrap();
     let (lua, calls) = load_mod(&src);

@@ -6,5 +6,6 @@ pub mod engine;
 pub mod modengine;
 pub mod session;
 pub mod sources;
+pub mod steam;
 
 pub use bus::IntensityBus;

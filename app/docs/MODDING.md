@@ -71,6 +71,14 @@ sources = {
       "~/.factorio/script-output/vibeloop.jsonl",
       "${APPDATA}/Factorio/script-output/vibeloop.jsonl",
   } },
+
+  -- For files inside a Steam install or a Proton prefix, never hardcode the
+  -- library location: `${STEAM_LIBRARIES}` expands to every steamapps folder
+  -- on the machine (all drives, read from Steam's own libraryfolders.vdf).
+  { id = "log2", type = "file", paths = {
+      "${STEAM_LIBRARIES}/common/Team Fortress 2/tf/console.log",
+      "${STEAM_LIBRARIES}/compatdata/2379780/pfx/drive_c/users/steamuser/AppData/Roaming/Balatro/vibeloop.jsonl",
+  } },
 }
 ```
 

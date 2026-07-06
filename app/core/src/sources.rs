@@ -122,6 +122,8 @@ pub fn parse_spec(entry: &mlua::Table) -> Result<SourceSpec> {
             if paths.is_empty() {
                 bail!("source '{id}': file source needs a `path` or a `paths` list");
             }
+            let paths =
+                expand_steam_candidates(paths, &crate::steam::steamapps_dirs());
             SourceKind::File { paths }
         }
         other => bail!(
@@ -176,6 +178,31 @@ pub fn spawn(
             tokio::spawn(file_loop(spec.id, paths, msg_tx, events, cancel));
         }
     }
+}
+
+/// Expands the `${STEAM_LIBRARIES}` token: a candidate containing it becomes
+/// one concrete candidate per steamapps folder on the machine (all drives).
+/// This is how mods reach Proton prefixes and game folders without
+/// hardcoding install locations. A machine with no Steam simply drops those
+/// candidates.
+fn expand_steam_candidates(
+    paths: Vec<String>,
+    steamapps: &[std::path::PathBuf],
+) -> Vec<String> {
+    const TOKEN: &str = "${STEAM_LIBRARIES}";
+    paths
+        .into_iter()
+        .flat_map(|p| {
+            if p.contains(TOKEN) {
+                steamapps
+                    .iter()
+                    .map(|sa| p.replace(TOKEN, &sa.to_string_lossy()))
+                    .collect()
+            } else {
+                vec![p]
+            }
+        })
+        .collect()
 }
 
 /// Expands `~` and `${VAR}` in a declared path. Unset variables leave the
@@ -717,6 +744,31 @@ fn flatten_osc(packet: rosc::OscPacket, out: &mut Vec<String>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn steam_token_expands_to_all_libraries() {
+        let libs = [
+            std::path::PathBuf::from("/home/u/.local/share/Steam/steamapps"),
+            std::path::PathBuf::from("/mnt/HDD/SteamLibrary/steamapps"),
+        ];
+        let out = expand_steam_candidates(
+            vec![
+                "${APPDATA}/Balatro/vibeloop.jsonl".into(),
+                "${STEAM_LIBRARIES}/compatdata/2379780/pfx/x.jsonl".into(),
+            ],
+            &libs,
+        );
+        assert_eq!(
+            out,
+            vec![
+                "${APPDATA}/Balatro/vibeloop.jsonl",
+                "/home/u/.local/share/Steam/steamapps/compatdata/2379780/pfx/x.jsonl",
+                "/mnt/HDD/SteamLibrary/steamapps/compatdata/2379780/pfx/x.jsonl",
+            ]
+        );
+        // No Steam at all: token candidates drop out entirely.
+        assert!(expand_steam_candidates(vec!["${STEAM_LIBRARIES}/a".into()], &[]).is_empty());
+    }
 
     fn lua_entry(code: &str) -> mlua::Table {
         let lua = mlua::Lua::new();

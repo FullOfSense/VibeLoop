@@ -7,10 +7,11 @@
 //! Pure std + serde — no tauri types, so it's unit-testable on its own.
 
 use serde::Serialize;
-use std::collections::HashSet;
 use std::net::TcpStream;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
+
+use vibeloop_core::steam::{steamapps_dirs, vdf_values};
 
 // ─── Public shape (what the frontend renders) ────────────────────────────────
 
@@ -90,7 +91,7 @@ impl Ctx {
     pub fn new(mods_dirs: Vec<PathBuf>) -> Self {
         Self {
             mods_dirs,
-            steamapps: discover_steamapps(),
+            steamapps: steamapps_dirs(),
         }
     }
 
@@ -160,63 +161,6 @@ fn home() -> Option<PathBuf> {
 
 fn env_dir(var: &str) -> Option<PathBuf> {
     std::env::var_os(var).map(PathBuf::from).filter(|p| p.is_dir())
-}
-
-fn steam_roots() -> Vec<PathBuf> {
-    let mut roots = Vec::new();
-    if let Some(h) = home() {
-        // Linux (native, symlink, flatpak), then macOS.
-        roots.push(h.join(".local/share/Steam"));
-        roots.push(h.join(".steam/steam"));
-        roots.push(h.join(".steam/root"));
-        roots.push(h.join(".var/app/com.valvesoftware.Steam/.local/share/Steam"));
-        roots.push(h.join("Library/Application Support/Steam"));
-    }
-    for var in ["ProgramFiles(x86)", "ProgramFiles"] {
-        if let Some(p) = env_dir(var) {
-            roots.push(p.join("Steam"));
-        }
-    }
-    roots.push(PathBuf::from("C:\\Program Files (x86)\\Steam"));
-    roots
-}
-
-/// Every steamapps folder on the machine: the default one(s) plus everything
-/// listed in libraryfolders.vdf (extra drives).
-fn discover_steamapps() -> Vec<PathBuf> {
-    let mut seen = HashSet::new();
-    let mut out = Vec::new();
-    let mut push = |p: PathBuf| {
-        if p.is_dir() {
-            let key = p.canonicalize().unwrap_or_else(|_| p.clone());
-            if seen.insert(key) {
-                out.push(p);
-            }
-        }
-    };
-    for root in steam_roots() {
-        let sa = root.join("steamapps");
-        if let Ok(text) = std::fs::read_to_string(sa.join("libraryfolders.vdf")) {
-            for lib in vdf_values(&text, "path") {
-                push(PathBuf::from(lib).join("steamapps"));
-            }
-        }
-        push(sa);
-    }
-    out
-}
-
-/// All values for `"key" "value"` lines in Valve's VDF/ACF format.
-/// Windows paths come escaped (`\\`) — unescaped here.
-fn vdf_values(text: &str, key: &str) -> Vec<String> {
-    let mut out = Vec::new();
-    for line in text.lines() {
-        let parts: Vec<&str> = line.split('"').collect();
-        if parts.len() >= 4 && parts[1] == key && !parts[3].is_empty() {
-            out.push(parts[3].replace("\\\\", "\\"));
-        }
-    }
-    out
 }
 
 fn port_open(port: u16) -> bool {
@@ -489,14 +433,18 @@ fn steps_for(ctx: &Ctx, mod_id: &str) -> Option<Vec<Step>> {
                 if smods {
                     step("smods", "ok", "Steamodded installed", "")
                 } else {
-                    step(
-                        "smods",
-                        "manual",
-                        "Install Steamodded (+ lovely)",
+                    let mut detail = String::from(
                         "Balatro mods need the lovely injector and Steamodded. The wiki's \
                          install guide covers both in ~5 minutes; then Re-check.",
-                    )
-                    .url("https://github.com/Steamodded/smods/wiki")
+                    );
+                    if cfg!(target_os = "linux") {
+                        detail.push_str(
+                            " On Linux/Proton, lovely is version.dll next to Balatro.exe plus \
+                             the game launch options: WINEDLLOVERRIDES=\"version=n,b\" %command%",
+                        );
+                    }
+                    step("smods", "manual", "Install Steamodded (+ lovely)", detail)
+                        .url("https://github.com/Steamodded/smods/wiki")
                 },
                 bridge_step(
                     ctx,
@@ -793,29 +741,6 @@ pub fn apply(ctx: &Ctx, mod_id: &str, step_id: &str) -> Result<SetupReport, Stri
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn vdf_extracts_paths_and_unescapes() {
-        let text = r#"
-"libraryfolders"
-{
-    "0"
-    {
-        "path"      "/home/u/.local/share/Steam"
-    }
-    "1"
-    {
-        "path"      "D:\\SteamLibrary"
-        "label"     ""
-    }
-}
-"#;
-        assert_eq!(
-            vdf_values(text, "path"),
-            vec!["/home/u/.local/share/Steam", "D:\\SteamLibrary"]
-        );
-        assert!(vdf_values(text, "label").is_empty()); // empty values skipped
-    }
 
     #[test]
     fn acf_extracts_installdir() {
