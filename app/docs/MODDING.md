@@ -187,11 +187,11 @@ VibeLoop source; they live under `mods/companions/`.
 | Minecraft (Java, Fabric) | client bridge → `file` | ✅ shipped (`mods/companions/minecraft/`, prebuilt jar included) |
 | R.E.P.O. | BepInEx bridge → `file` | ✅ shipped (`mods/companions/repo/`, prebuilt dll, hooks compiler-verified against the game) |
 | WEBFISHING | GDWeave script bridge → `file` | ✅ shipped (`mods/companions/webfishing/`, prebuilt pck; bite/catch/level-up) |
-| Bloons TD 6 | Mod Helper companion → `file` | 🔜 IL2CPP: launch the game once with MelonLoader/Mod Helper installed, then the bridge can be compiled against the generated interop assemblies |
-| Deep Rock Galactic | no scriptable channel (UE pak mods can't do I/O) | ❌ for now |
-| Satisfactory | pure Unreal; SML mods need a full UE toolchain, dedicated-server API lacks player events | ❌ for now |
-| Far Far West | pure Unreal, no modding framework | ❌ for now |
-| Palworld | dedicated-server REST only | ⚠️ partial at best |
+| Bloons TD 6 | Mod Helper companion → `file` would work (IL2CPP) | ⏸ dropped from the roadmap |
+| Deep Rock Galactic | no scriptable channel (UE pak mods can't do I/O) | ⏸ dropped from the roadmap |
+| Satisfactory | pure Unreal; SML mods need a full UE toolchain | ⏸ dropped from the roadmap |
+| Far Far West | pure Unreal, no modding framework | ⏸ dropped from the roadmap |
+| Palworld | dedicated-server REST only | ⏸ dropped from the roadmap |
 | Sea of Thieves | none (anti-cheat, no API) | ❌ not moddable safely |
 | Crab Champions | none | ❌ no data channel |
 | Generation Zero | none | ❌ no data channel |
