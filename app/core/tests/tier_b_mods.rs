@@ -1,0 +1,131 @@
+//! Logic tests for the Tier B (file-bridge) mods: each mod's `on_message`
+//! is called with exactly what its bridge writes — Factorio/Balatro JSON
+//! lines, and the raw log lines of Isaac, TF2 and DST (as the file source
+//! wraps them: `{"line": "…"}`).
+
+use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
+
+use mlua::LuaSerdeExt;
+
+type Calls = Arc<Mutex<Vec<(String, f64)>>>;
+
+fn mods_dir() -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../mods")
+}
+
+/// Loads a mod with a recording `vibe` stub; returns the Lua state and the
+/// recorded (function, level) calls.
+fn load_mod(source: &str) -> (mlua::Lua, Calls) {
+    let lua = mlua::Lua::new();
+    let calls: Calls = Arc::new(Mutex::new(Vec::new()));
+    let vibe = lua.create_table().unwrap();
+    let c = calls.clone();
+    vibe.set(
+        "pulse",
+        lua.create_function(move |_, (level, _s): (f64, f64)| {
+            c.lock().unwrap().push(("pulse".into(), level));
+            Ok(())
+        })
+        .unwrap(),
+    )
+    .unwrap();
+    let c = calls.clone();
+    vibe.set(
+        "set",
+        lua.create_function(move |_, level: f64| {
+            c.lock().unwrap().push(("set".into(), level));
+            Ok(())
+        })
+        .unwrap(),
+    )
+    .unwrap();
+    vibe.set("log", lua.create_function(|_, _: String| Ok(())).unwrap()).unwrap();
+    vibe.set("status", lua.create_function(|_, _: String| Ok(())).unwrap()).unwrap();
+    vibe.set("now", lua.create_function(|_, ()| Ok(1.0f64)).unwrap()).unwrap();
+    lua.globals().set("vibe", vibe).unwrap();
+    lua.load(source).exec().unwrap();
+    (lua, calls)
+}
+
+fn send(lua: &mlua::Lua, json: &str) {
+    let value: serde_json::Value = serde_json::from_str(json).unwrap();
+    let on_message: mlua::Function = lua.globals().get("on_message").unwrap();
+    on_message.call::<()>(("log", lua.to_value(&value).unwrap())).unwrap();
+}
+
+fn send_line(lua: &mlua::Lua, line: &str) {
+    send(lua, &serde_json::json!({ "line": line }).to_string());
+}
+
+fn pulses(calls: &Calls) -> Vec<f64> {
+    calls.lock().unwrap().iter().filter(|(k, _)| k == "pulse").map(|(_, v)| *v).collect()
+}
+
+#[test]
+fn factorio_reacts_to_bridge_events() {
+    let src = std::fs::read_to_string(mods_dir().join("factorio.lua")).unwrap();
+    let (lua, calls) = load_mod(&src);
+    send(&lua, r#"{"e":"dmg","f":0.3}"#);
+    send(&lua, r#"{"e":"died"}"#);
+    send(&lua, r#"{"e":"research"}"#);
+    let p = pulses(&calls);
+    assert!(p.iter().any(|v| (0.55..0.7).contains(v)), "damage pulse missing: {p:?}");
+    assert!(p.iter().any(|v| *v >= 0.9), "death pulse missing: {p:?}");
+    assert!(p.iter().any(|v| (*v - 0.5).abs() < 0.01), "research pulse missing: {p:?}");
+}
+
+#[test]
+fn balatro_reacts_to_bridge_events() {
+    let src = std::fs::read_to_string(mods_dir().join("balatro.lua")).unwrap();
+    let (lua, calls) = load_mod(&src);
+    send(&lua, r#"{"e":"score","chips":300,"target":600}"#);
+    send(&lua, r#"{"e":"state","s":"ROUND_EVAL","boss":true}"#);
+    send(&lua, r#"{"e":"state","s":"GAME_OVER","boss":false}"#);
+    let p = pulses(&calls);
+    assert!(p.iter().any(|v| (0.35..0.5).contains(v)), "half-progress score pulse: {p:?}");
+    assert!(p.iter().any(|v| (*v - 0.85).abs() < 0.01), "boss blind pulse: {p:?}");
+    assert!(p.iter().any(|v| (*v - 0.9).abs() < 0.01), "game over pulse: {p:?}");
+}
+
+#[test]
+fn isaac_parses_log_markers() {
+    let src = std::fs::read_to_string(mods_dir().join("binding_of_isaac.lua")).unwrap();
+    let (lua, calls) = load_mod(&src);
+    send_line(&lua, "[INFO] - Lua Debug: VIBELOOP dmg 2.0 6");
+    send_line(&lua, "[INFO] - Lua Debug: VIBELOOP boss");
+    send_line(&lua, "[INFO] - some unrelated engine noise");
+    let p = pulses(&calls);
+    assert!(p.iter().any(|v| (0.7..0.85).contains(v)), "1/3 hearts damage pulse: {p:?}");
+    assert!(p.iter().any(|v| (*v - 0.7).abs() < 0.01), "boss pulse: {p:?}");
+    assert_eq!(p.len(), 2, "noise line must not pulse: {p:?}");
+}
+
+#[test]
+fn tf2_attributes_kill_feed_lines() {
+    let src = std::fs::read_to_string(mods_dir().join("team_fortress2.lua")).unwrap();
+    // The shipped file requires the player to fill in MY_NICK; do the same.
+    let src = src.replace(r#"local MY_NICK = """#, r#"local MY_NICK = "TestGuy""#);
+    let (lua, calls) = load_mod(&src);
+    send_line(&lua, "TestGuy killed Bot01 with scattergun.");
+    send_line(&lua, "TestGuy killed Bot02 with scattergun. (crit)");
+    send_line(&lua, "Bot03 killed TestGuy with sniperrifle.");
+    send_line(&lua, "Bot04 killed Bot05 with flamethrower.");
+    let p = pulses(&calls);
+    assert!(p.iter().any(|v| (*v - 0.55).abs() < 0.01), "kill pulse: {p:?}");
+    assert!(p.iter().any(|v| (*v - 0.75).abs() < 0.01), "crit kill pulse: {p:?}");
+    assert!(p.iter().any(|v| (*v - 0.85).abs() < 0.01), "death pulse: {p:?}");
+    assert_eq!(p.len(), 3, "other people's kills must not pulse: {p:?}");
+}
+
+#[test]
+fn dst_parses_bridge_markers() {
+    let src = std::fs::read_to_string(mods_dir().join("dont_starve_together.lua")).unwrap();
+    let (lua, calls) = load_mod(&src);
+    send_line(&lua, "[00:01:23]: VIBELOOP dmg 0.250");
+    send_line(&lua, "[00:02:00]: VIBELOOP died");
+    send_line(&lua, "[00:02:05]: unrelated chatter");
+    let p = pulses(&calls);
+    assert!(p.iter().any(|v| (*v - 0.7).abs() < 0.01), "25% health damage pulse: {p:?}");
+    assert!(p.iter().any(|v| *v >= 0.9), "death pulse: {p:?}");
+}

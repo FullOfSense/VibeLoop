@@ -134,6 +134,76 @@ end
 }
 
 #[tokio::test]
+async fn file_source_tails_without_replaying_history() {
+    let dir = std::env::temp_dir().join(format!("vibeloop-tail-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let log = dir.join("game.log");
+    // Pre-existing content must NOT be replayed.
+    std::fs::write(&log, "HIT\nHIT\n").unwrap();
+
+    let mod_path = write_mod(
+        "tail",
+        &format!(
+            r#"
+sources = {{ {{ id = "log", type = "file", path = "{}" }} }}
+hits = 0
+function on_message(source, data)
+  if data.line == "HIT" then
+    hits = hits + 1
+    vibe.set(0.4 + hits * 0.1)   -- 1st HIT → 0.5, 2nd HIT → 0.6, …
+  elseif data.v == 9 then
+    vibe.set(0.9)
+  end
+end
+"#,
+            log.display()
+        ),
+    );
+    let bus = IntensityBus::new();
+    let (tx, _rx) = mpsc::unbounded_channel();
+    let running = run_mod(&mod_path, &bus, tx).await.unwrap();
+    tokio::time::sleep(Duration::from_millis(600)).await;
+    assert_eq!(*bus.subscribe().borrow(), 0.0, "history was replayed");
+
+    // Plain line → wrapped as {"line": ...}.
+    let mut f = std::fs::OpenOptions::new().append(true).open(&log).unwrap();
+    use std::io::Write;
+    writeln!(f, "HIT").unwrap();
+    f.sync_all().unwrap();
+    expect_level(&bus, 0.49, 5).await;
+
+    // JSON line → passed through as-is.
+    writeln!(f, r#"{{"v":9}}"#).unwrap();
+    f.sync_all().unwrap();
+    expect_level(&bus, 0.89, 5).await;
+    drop(f);
+
+    // Truncation (new game session) must not kill the tail. The second HIT
+    // sets exactly 0.6 — a level nothing else in this test produces — so
+    // seeing the bus settle there proves the post-truncation line was read.
+    std::fs::write(&log, "").unwrap();
+    tokio::time::sleep(Duration::from_millis(600)).await;
+    let mut f = std::fs::OpenOptions::new().append(true).open(&log).unwrap();
+    writeln!(f, "HIT").unwrap();
+    f.sync_all().unwrap();
+    let mut rx = bus.subscribe();
+    tokio::time::timeout(Duration::from_secs(5), async {
+        loop {
+            if (*rx.borrow() - 0.6).abs() < 0.02 {
+                break;
+            }
+            rx.changed().await.unwrap();
+        }
+    })
+    .await
+    .expect("tail died after truncation — second HIT never arrived");
+
+    running.stop();
+    bus.shutdown();
+    std::fs::remove_dir_all(&dir).unwrap();
+}
+
+#[tokio::test]
 async fn osc_source_decodes_vrchat_parameters() {
     let port = 38214u16;
     let mod_path = write_mod(

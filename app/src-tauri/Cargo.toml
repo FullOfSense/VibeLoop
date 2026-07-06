@@ -1,6 +1,6 @@
 [package]
 name = "vibeloop"
-version = "0.2.0"
+version = "0.3.0"
 description = "VibeLoop — game-driven haptics with shared sessions"
 edition = "2021"
 

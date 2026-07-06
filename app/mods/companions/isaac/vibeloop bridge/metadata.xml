@@ -1,0 +1,7 @@
+<metadata>
+	<name>VibeLoop Bridge</name>
+	<directory>vibeloop bridge</directory>
+	<description>Writes game events to log.txt for VibeLoop haptics.</description>
+	<version>1.0</version>
+	<visibility/>
+</metadata>

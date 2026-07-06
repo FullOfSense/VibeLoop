@@ -507,22 +507,29 @@ pub fn run() {
             };
             app.manage(state);
 
-            // Seed the per-user mods folder with the bundled mods on first run.
+            // Seed the per-user mods folder with the bundled mods (including
+            // the companions/ folder) — copy only what's missing, so a user's
+            // edited mods (e.g. MY_NICK in team_fortress2.lua) are never
+            // overwritten by an update.
+            fn seed_missing(from: &std::path::Path, to: &std::path::Path) {
+                let _ = std::fs::create_dir_all(to);
+                let Ok(entries) = std::fs::read_dir(from) else {
+                    return;
+                };
+                for entry in entries.flatten() {
+                    let target = to.join(entry.file_name());
+                    if entry.path().is_dir() {
+                        seed_missing(&entry.path(), &target);
+                    } else if !target.exists() {
+                        let _ = std::fs::copy(entry.path(), target);
+                    }
+                }
+            }
             let handle = app.handle().clone();
             if let (Ok(resources), Ok(data)) =
                 (handle.path().resource_dir(), handle.path().app_data_dir())
             {
-                let user_mods = data.join("mods");
-                let bundled = resources.join("mods");
-                let _ = std::fs::create_dir_all(&user_mods);
-                if let Ok(entries) = std::fs::read_dir(&bundled) {
-                    for entry in entries.flatten() {
-                        let target = user_mods.join(entry.file_name());
-                        if !target.exists() {
-                            let _ = std::fs::copy(entry.path(), target);
-                        }
-                    }
-                }
+                seed_missing(&resources.join("mods"), &data.join("mods"));
             }
 
             // Live intensity meter for the UI.

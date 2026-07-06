@@ -14,6 +14,10 @@
 //!   (Counter-Strike 2 Game State Integration pushes JSON to us).
 //! - `osc` — receive OSC packets on a local UDP port (VRChat avatar
 //!   parameters), forwarded as `{"addr": "/avatar/...", "args": [...]}`.
+//! - `file` — tail a file the game (or a tiny in-game bridge) writes to:
+//!   Factorio's script-output, TF2's console.log, Isaac's log.txt. New lines
+//!   are forwarded as-is when they are JSON, else wrapped as `{"line": "…"}`.
+//!   Tailing starts at the end of the file — history is never replayed.
 //!
 //! Listeners bind 127.0.0.1 only: nothing on the network can feed a mod.
 
@@ -49,6 +53,9 @@ pub enum SourceKind {
     Poll { url: String, interval: Duration, insecure: bool },
     HttpListen { port: u16 },
     Osc { port: u16 },
+    /// Candidate paths (OS-dependent install locations); the first one that
+    /// exists gets tailed.
+    File { paths: Vec<String> },
 }
 
 /// Parses one Lua source entry. `type` may be omitted for `ws`/`poll` —
@@ -102,8 +109,23 @@ pub fn parse_spec(entry: &mlua::Table) -> Result<SourceSpec> {
                 .flatten()
                 .with_context(|| format!("source '{id}': osc source needs a `port`"))?,
         },
+        "file" => {
+            let mut paths: Vec<String> = Vec::new();
+            if let Ok(Some(p)) = entry.get::<Option<String>>("path") {
+                paths.push(p);
+            }
+            if let Ok(Some(list)) = entry.get::<Option<mlua::Table>>("paths") {
+                for p in list.sequence_values::<String>() {
+                    paths.push(p?);
+                }
+            }
+            if paths.is_empty() {
+                bail!("source '{id}': file source needs a `path` or a `paths` list");
+            }
+            SourceKind::File { paths }
+        }
         other => bail!(
-            "source '{id}': unknown type '{other}' (expected ws, poll, listen or osc)"
+            "source '{id}': unknown type '{other}' (expected ws, poll, listen, osc or file)"
         ),
     };
     Ok(SourceSpec { id, kind })
@@ -149,6 +171,145 @@ pub fn spawn(
         }
         SourceKind::Osc { port } => {
             tokio::spawn(osc_loop(spec.id, port, msg_tx, events, cancel));
+        }
+        SourceKind::File { paths } => {
+            tokio::spawn(file_loop(spec.id, paths, msg_tx, events, cancel));
+        }
+    }
+}
+
+/// Expands `~` and `${VAR}` in a declared path. Unset variables leave the
+/// candidate unusable, which is fine — it simply never exists.
+fn expand_path(raw: &str) -> String {
+    let mut out = String::with_capacity(raw.len());
+    let home = std::env::var("HOME")
+        .or_else(|_| std::env::var("USERPROFILE"))
+        .unwrap_or_default();
+    let mut rest = raw;
+    if let Some(tail) = rest.strip_prefix("~") {
+        out.push_str(&home);
+        rest = tail;
+    }
+    while let Some(start) = rest.find("${") {
+        out.push_str(&rest[..start]);
+        let after = &rest[start + 2..];
+        match after.find('}') {
+            Some(end) => {
+                out.push_str(&std::env::var(&after[..end]).unwrap_or_default());
+                rest = &after[end + 1..];
+            }
+            None => {
+                out.push_str(&rest[start..]);
+                rest = "";
+            }
+        }
+    }
+    out.push_str(rest);
+    out
+}
+
+/// Tails the first existing candidate path. Starts at the end of the file
+/// (no history), survives truncation (new game session) and the file
+/// disappearing (game closed). Lines that already are JSON pass through;
+/// anything else is wrapped as `{"line": "…"}`.
+async fn file_loop(
+    id: String,
+    paths: Vec<String>,
+    msg_tx: mpsc::Sender<(String, String)>,
+    events: mpsc::UnboundedSender<ModEvent>,
+    cancel: CancellationToken,
+) {
+    use tokio::io::AsyncSeekExt;
+
+    let candidates: Vec<String> = paths.iter().map(|p| expand_path(p)).collect();
+    let mut announced_down = false;
+    'outer: loop {
+        if cancel.is_cancelled() {
+            return;
+        }
+        // Wait for any candidate to exist.
+        let path = loop {
+            if let Some(p) = candidates.iter().find(|p| std::path::Path::new(p).is_file()) {
+                break p.clone();
+            }
+            if !announced_down {
+                announced_down = true;
+                let _ = events.send(ModEvent::SourceDown {
+                    source: id.clone(),
+                    detail: "log file not found yet — waiting for the game".into(),
+                });
+            }
+            tokio::select! {
+                _ = cancel.cancelled() => return,
+                _ = tokio::time::sleep(Duration::from_secs(1)) => {}
+            }
+        };
+
+        let Ok(mut file) = tokio::fs::File::open(&path).await else {
+            tokio::select! {
+                _ = cancel.cancelled() => return,
+                _ = tokio::time::sleep(RECONNECT_DELAY) => {}
+            }
+            continue;
+        };
+        // Start at the end: what happened before the mod started is history.
+        let mut pos = file.seek(std::io::SeekFrom::End(0)).await.unwrap_or(0);
+        let _ = events.send(ModEvent::SourceUp { source: id.clone() });
+        announced_down = false;
+        let mut partial = Vec::new();
+        let mut chunk = vec![0u8; 64 * 1024];
+
+        loop {
+            tokio::select! {
+                _ = cancel.cancelled() => return,
+                _ = tokio::time::sleep(Duration::from_millis(250)) => {}
+            }
+            let len = match tokio::fs::metadata(&path).await {
+                Ok(m) => m.len(),
+                Err(_) => {
+                    // File went away (game closed / log rotated).
+                    let _ = events.send(ModEvent::SourceDown {
+                        source: id.clone(),
+                        detail: "log file disappeared — waiting for the game".into(),
+                    });
+                    announced_down = true;
+                    continue 'outer;
+                }
+            };
+            if len < pos {
+                // Truncated: a new session started writing from the top.
+                pos = 0;
+                partial.clear();
+                if file.seek(std::io::SeekFrom::Start(0)).await.is_err() {
+                    continue 'outer;
+                }
+            }
+            while pos < len {
+                let n = match file.read(&mut chunk).await {
+                    Ok(0) => break,
+                    Ok(n) => n,
+                    Err(_) => continue 'outer,
+                };
+                pos += n as u64;
+                partial.extend_from_slice(&chunk[..n]);
+                // Guard against a game writing one enormous line.
+                if partial.len() > MAX_BODY_BYTES {
+                    partial.clear();
+                }
+                while let Some(nl) = partial.iter().position(|&b| b == b'\n') {
+                    let line: Vec<u8> = partial.drain(..=nl).collect();
+                    let line = String::from_utf8_lossy(&line).trim().to_string();
+                    if line.is_empty() {
+                        continue;
+                    }
+                    let payload = if serde_json::from_str::<serde_json::Value>(&line).is_ok() {
+                        line
+                    } else {
+                        serde_json::json!({ "line": line }).to_string()
+                    };
+                    let _ = msg_tx.try_send((id.clone(), payload));
+                }
+            }
         }
     }
 }

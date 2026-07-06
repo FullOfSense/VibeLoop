@@ -93,3 +93,8 @@ viewer feels — mods never need to know whether a session is running.
 | `counterstrike2.lua` | Counter-Strike 2 (copy the cfg from `companions/cs2/` once) | Damage, kills, flashes, fire, bomb tension, round wins |
 | `vrchat.lua` | VRChat (enable OSC in-game) | An avatar float parameter — e.g. a Contact Receiver named `VibeLoop` — drives intensity directly |
 | `beat_saber.lua` | Beat Saber, via the DataPuller mod | Cuts tick, misses sting, combo milestones, low energy hums, finish celebrates by accuracy |
+| `factorio.lua` | Factorio (bridge mod in `companions/factorio/`) | Damage buzzes, deaths sting, research rewards, rocket launches celebrate |
+| `balatro.lua` | Balatro (Steamodded bridge in `companions/balatro/`) | Scoring builds toward the blind, boss blinds hit harder, game over stings |
+| `binding_of_isaac.lua` | The Binding of Isaac (bridge in `companions/isaac/`) | Heart damage scales the sting, boss kills and new floors reward |
+| `team_fortress2.lua` | Team Fortress 2 (`-condebug` launch option, set `MY_NICK` in the file) | Your kills reward (crits extra), your deaths sting |
+| `dont_starve_together.lua` | Don't Starve Together (client bridge in `companions/dst/`) | Hits buzz by health lost, death stings; works on any server |

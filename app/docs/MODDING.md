@@ -19,7 +19,12 @@ five patterns, and the first four map directly onto a VibeLoop source type:
 | The game POSTs state to a URL you give it | `listen` | Counter-Strike 2 / Dota 2 (Game State Integration) |
 | The game broadcasts OSC over UDP | `osc` | VRChat (avatar parameters on port 9001) |
 | A community tool bridges the game to a WebSocket | `ws` | osu! (tosu), Beat Saber (DataPuller) |
+| The game (or a tiny in-game script) writes a file | `file` | Factorio (script-output), TF2 (console.log), Isaac (log.txt), Balatro, DST |
 | The game has its own mod SDK and nothing above | write a tiny companion mod in the game that speaks one of the above | Minecraft (Fabric), REPO (BepInEx), BTD6 (Mod Helper) |
+
+The `file` pattern is the great equalizer: **any** game whose modding API can
+print a line — even just to its own debug log — can talk to VibeLoop. The
+in-game side of that is usually under 40 lines; see `mods/companions/`.
 
 How to find out which one your game is:
 
@@ -56,6 +61,16 @@ sources = {
   -- OSC over UDP on 127.0.0.1:<port>. Each OSC message arrives as
   -- { addr = "/avatar/parameters/X", args = { 0.7 } }.
   { id = "vrc", type = "osc", port = 9001 },
+
+  -- Tail a file. Give one `path` or a `paths` list of candidates (per-OS
+  -- install locations); `~` and `${ENV_VARS}` expand. Tailing starts at the
+  -- END of the file (history is never replayed) and survives truncation and
+  -- the file disappearing. JSON lines arrive decoded; any other line
+  -- arrives as { line = "the raw text" }.
+  { id = "log", type = "file", paths = {
+      "~/.factorio/script-output/vibeloop.jsonl",
+      "${APPDATA}/Factorio/script-output/vibeloop.jsonl",
+  } },
 }
 ```
 
@@ -164,11 +179,11 @@ VibeLoop source; they live under `mods/companions/`.
 | Counter-Strike 2 | Game State Integration → `listen` | ✅ shipped (cfg in `mods/companions/cs2/`) |
 | VRChat | OSC → `osc` | ✅ shipped |
 | Beat Saber | DataPuller → `ws` | ✅ shipped |
-| Factorio | native Lua mod → file bridge | 🔜 tier B |
-| Balatro | Steamodded mod → file bridge | 🔜 tier B |
-| The Binding of Isaac | native Lua mod → log bridge | 🔜 tier B |
-| Team Fortress 2 | `con_logfile` console log | 🔜 tier B |
-| Don't Starve Together | native Lua mod | 🔜 tier B (bridge under investigation) |
+| Factorio | bridge mod → script-output → `file` | ✅ shipped (`mods/companions/factorio/`) |
+| Balatro | Steamodded bridge → `file` | ✅ shipped (`mods/companions/balatro/`) |
+| The Binding of Isaac | bridge mod → log.txt → `file` | ✅ shipped (`mods/companions/isaac/`) |
+| Team Fortress 2 | `-condebug` console.log → `file` | ✅ shipped (launch option only, no mod) |
+| Don't Starve Together | client bridge → client_log.txt → `file` | ✅ shipped (`mods/companions/dst/`) |
 | Minecraft | Fabric companion → `ws` | 🔜 tier C |
 | REPO | BepInEx companion → `ws` | 🔜 tier C |
 | Bloons TD 6 | Mod Helper companion → `ws` | 🔜 tier C |

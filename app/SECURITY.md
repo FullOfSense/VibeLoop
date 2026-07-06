@@ -47,6 +47,10 @@ Source hardening:
   (self-signed certificates, needed for League of Legends' local API) is
   refused for anything but loopback URLs, so a mod can't use it to talk to
   the internet with TLS validation off.
+- `file` sources are strictly read-only tails of files the mod names in
+  plain text at its top — a mod still cannot write, delete, or send
+  anything anywhere. Check a downloaded mod's `sources` block before
+  running it, same as you'd skim any script.
 
 ## Sessions — hardened inputs
 

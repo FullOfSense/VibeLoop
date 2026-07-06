@@ -1,0 +1,9 @@
+{
+  "name": "vibeloop-bridge",
+  "version": "1.0.0",
+  "title": "VibeLoop Bridge",
+  "author": "FullOfSense",
+  "description": "Streams damage, deaths, research and rocket launches to script-output/vibeloop.jsonl for VibeLoop haptics.",
+  "factorio_version": "2.0",
+  "dependencies": ["base >= 1.1"]
+}
