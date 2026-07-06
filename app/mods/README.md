@@ -4,6 +4,13 @@ A mod is **one Lua file** in this folder. Drop it in, press 📂 in the app (or
 restart it), and it appears in the GAME MOD dropdown. No compilation, no
 packaging, no networking code.
 
+Every shipped mod comes with a **setup checklist** in the app: select the
+mod and VibeLoop checks on disk whether the game and every dependency are
+actually in place. Steps it can do itself (copying our companion bridges
+into the game) get an **Install** button; steps only you can do (installing
+BepInEx, enabling OSC, a launch option) get a **Guide ↗** link and a
+Re-check button. When the summary says *READY TO PLAY*, it will work.
+
 Want to connect a game that isn't here yet? Read the full guide:
 [`docs/MODDING.md`](../docs/MODDING.md).
 

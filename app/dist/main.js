@@ -25,6 +25,10 @@ const el = {
   mod: $("mod"),
   modDesc: $("mod-desc"),
   modSetup: $("mod-setup"),
+  doctor: $("doctor"),
+  doctorSummary: $("doctor-summary"),
+  doctorSteps: $("doctor-steps"),
+  recheck: $("btn-recheck"),
   modsFolder: $("btn-mods-folder"),
   start: $("btn-start"),
   setup: $("setup"),
@@ -178,6 +182,112 @@ function updateModDesc() {
   const m = mods.find((x) => x.id === el.mod.value);
   el.modDesc.textContent = m ? m.description : "";
   el.modSetup.textContent = m && m.setup ? `⚙ ${m.setup}` : "";
+  refreshDoctor();
+}
+
+// ── Setup doctor ─────────────────────────────────────────────────────────────
+// Per-mod checklist: is everything this mod needs actually installed?
+// Rust checks the disk; steps are either one-click installable ("install"),
+// point at a guide ("url"), or need an edit in the mods folder ("folder").
+
+const STEP_ICONS = { ok: "✔", todo: "↓", manual: "✋", unknown: "?" };
+
+async function refreshDoctor() {
+  const id = el.mod.value;
+  if (!id) {
+    el.doctor.classList.add("hidden");
+    return;
+  }
+  try {
+    const report = await invoke("mod_setup", { modId: id });
+    if (el.mod.value === id) renderDoctor(report); // ignore stale answers
+  } catch {
+    el.doctor.classList.add("hidden");
+  }
+}
+
+function renderDoctor(report) {
+  if (!report.supported) {
+    // Custom/unknown mod: fall back to the plain @setup hint.
+    el.doctor.classList.add("hidden");
+    return;
+  }
+  el.modSetup.textContent = ""; // the checklist replaces the ⚙ one-liner
+  el.doctor.classList.remove("hidden");
+
+  const left = report.steps.filter((s) => s.state !== "ok").length;
+  el.doctorSummary.textContent = report.ready
+    ? "✔ READY TO PLAY"
+    : `SETUP — ${left} step${left === 1 ? "" : "s"} left`;
+  el.doctorSummary.classList.toggle("ready", report.ready);
+
+  el.doctorSteps.innerHTML = "";
+  for (const s of report.steps) {
+    const li = document.createElement("li");
+    li.className = `dstep ${s.state}`;
+
+    const icon = document.createElement("span");
+    icon.className = "dstep-icon";
+    icon.textContent = STEP_ICONS[s.state] || "?";
+    li.appendChild(icon);
+
+    const body = document.createElement("div");
+    body.className = "dstep-body";
+    const title = document.createElement("div");
+    title.className = "dstep-title";
+    title.textContent = s.title;
+    body.appendChild(title);
+    if (s.detail) {
+      const detail = document.createElement("div");
+      detail.className = "dstep-detail";
+      detail.textContent = s.detail;
+      body.appendChild(detail);
+    }
+
+    const buttons = document.createElement("div");
+    buttons.className = "dstep-buttons";
+    if (s.action === "install") {
+      const b = document.createElement("button");
+      b.className = "small install";
+      b.textContent = "Install";
+      b.addEventListener("click", () =>
+        guarded(async () => {
+          const updated = await invoke("mod_setup_apply", {
+            modId: report.mod_id,
+            stepId: s.id,
+          });
+          log(`Installed: ${s.title}`);
+          if (el.mod.value === report.mod_id) renderDoctor(updated);
+        }, b)
+      );
+      buttons.appendChild(b);
+    }
+    if (s.action === "folder") {
+      const b = document.createElement("button");
+      b.className = "small";
+      b.textContent = "📂 Mods folder";
+      b.addEventListener("click", () =>
+        guarded(async () => {
+          const dir = await invoke("open_mods_folder");
+          log(`Mods folder: ${dir}`);
+        }, b)
+      );
+      buttons.appendChild(b);
+    }
+    if (s.url) {
+      const b = document.createElement("button");
+      b.className = "small";
+      b.textContent = "Guide ↗";
+      b.addEventListener("click", () =>
+        guarded(() => invoke("open_url", { url: s.url }), b)
+      );
+      buttons.appendChild(b);
+    }
+    if (buttons.children.length) body.appendChild(buttons);
+
+    li.appendChild(body);
+    el.doctorSteps.appendChild(li);
+  }
 }
 
 function toast(message) {
@@ -264,6 +374,7 @@ el.modsFolder.addEventListener("click", () =>
 );
 
 el.mod.addEventListener("change", updateModDesc);
+el.recheck.addEventListener("click", () => refreshDoctor());
 
 // Password visibility toggles.
 el.eyePassword.addEventListener("click", () => {

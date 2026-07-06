@@ -215,3 +215,10 @@ Header comments make your mod present itself in the app:
 Keep `@setup` honest and singular — if setup takes more than one step, ship a
 companion folder with a README like `mods/companions/cs2/`. Then just share
 the `.lua` file; dropping it into the mods folder is the whole install.
+
+Mods shipped with VibeLoop additionally get a **setup checklist** in the app
+(`src-tauri/src/setup.rs`): it verifies the game and its dependencies on
+disk, one-click-installs companion bridges, and links guides for the rest.
+Third-party mods fall back to the `@setup` line — if your mod gets adopted
+into VibeLoop, add a checker for it there (a test enforces that every
+shipped mod has one).

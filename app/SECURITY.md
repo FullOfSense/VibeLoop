@@ -52,6 +52,15 @@ Source hardening:
   anything anywhere. Check a downloaded mod's `sources` block before
   running it, same as you'd skim any script.
 
+Setup doctor (the per-mod install checklist):
+
+- Its checks only *read* well-known paths (Steam library manifests, game
+  folders, `.minecraft`, …). Mods have no access to it or its results.
+- Its Install button copies **only files VibeLoop ships** (the open-source
+  companion bridges under `mods/companions/`) to the fixed, per-game
+  location shown in the step — never anything a mod or a download names.
+- Guide links are opened in your browser and restricted to `https://`.
+
 ## Sessions — hardened inputs
 
 - Viewers physically cannot send data to a host — the host never reads from

@@ -9,6 +9,8 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, RunEvent, State};
 use tokio::sync::{mpsc, Mutex};
 
+pub mod setup;
+
 use vibeloop_core::device::{DeviceInfo, DeviceManager, INTIFACE_CENTRAL_URL};
 use vibeloop_core::modengine::{self, ModEvent, ModInfo, RunningMod};
 use vibeloop_core::session::{self, Session, SessionEvent};
@@ -235,11 +237,13 @@ fn mods_dirs(app: &AppHandle) -> Vec<PathBuf> {
             dirs.push(parent.join("mods"));
         }
     }
-    if let Ok(resources) = app.path().resource_dir() {
-        dirs.push(resources.join("mods"));
-    }
+    // The user-editable dir must outrank the bundled resources: edits like
+    // MY_NICK in team_fortress2.lua live in app-data and have to win.
     if let Ok(data) = app.path().app_data_dir() {
         dirs.push(data.join("mods"));
+    }
+    if let Ok(resources) = app.path().resource_dir() {
+        dirs.push(resources.join("mods"));
     }
     dirs
 }
@@ -485,6 +489,42 @@ fn open_mods_folder(app: AppHandle) -> Result<String, String> {
     Ok(dir.display().to_string())
 }
 
+// ─── Setup doctor ────────────────────────────────────────────────────────────
+
+#[tauri::command]
+fn mod_setup(app: AppHandle, mod_id: String) -> setup::SetupReport {
+    setup::report(&setup::Ctx::new(mods_dirs(&app)), &mod_id)
+}
+
+#[tauri::command]
+fn mod_setup_apply(
+    app: AppHandle,
+    mod_id: String,
+    step_id: String,
+) -> Result<setup::SetupReport, String> {
+    setup::apply(&setup::Ctx::new(mods_dirs(&app)), &mod_id, &step_id)
+}
+
+#[tauri::command]
+fn open_url(url: String) -> Result<(), String> {
+    if !url.starts_with("https://") {
+        return Err("Only https:// links can be opened.".into());
+    }
+
+    #[cfg(target_os = "linux")]
+    let opener = "xdg-open";
+    #[cfg(target_os = "macos")]
+    let opener = "open";
+    #[cfg(target_os = "windows")]
+    let opener = "explorer";
+
+    std::process::Command::new(opener)
+        .arg(&url)
+        .spawn()
+        .map_err(|e| format!("Could not open the browser: {e}"))?;
+    Ok(())
+}
+
 // ─── Entry ───────────────────────────────────────────────────────────────────
 
 pub fn run() {
@@ -561,6 +601,9 @@ pub fn run() {
             test_buzz,
             scan_devices,
             open_mods_folder,
+            mod_setup,
+            mod_setup_apply,
+            open_url,
         ])
         .build(tauri::generate_context!())
         .expect("error while running tauri application")
