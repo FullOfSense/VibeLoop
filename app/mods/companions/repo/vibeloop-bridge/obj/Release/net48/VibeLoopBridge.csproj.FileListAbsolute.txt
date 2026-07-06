@@ -1,7 +1,0 @@
-/media/patrixonix/HDD/VibeLoop/VibeLoop/app/mods/companions/repo/vibeloop-bridge/bin/Release/net48/VibeLoopBridge.REPO.dll
-/media/patrixonix/HDD/VibeLoop/VibeLoop/app/mods/companions/repo/vibeloop-bridge/obj/Release/net48/VibeLoopBridge.csproj.AssemblyReference.cache
-/media/patrixonix/HDD/VibeLoop/VibeLoop/app/mods/companions/repo/vibeloop-bridge/obj/Release/net48/VibeLoopBridge.GeneratedMSBuildEditorConfig.editorconfig
-/media/patrixonix/HDD/VibeLoop/VibeLoop/app/mods/companions/repo/vibeloop-bridge/obj/Release/net48/VibeLoopBridge.AssemblyInfoInputs.cache
-/media/patrixonix/HDD/VibeLoop/VibeLoop/app/mods/companions/repo/vibeloop-bridge/obj/Release/net48/VibeLoopBridge.AssemblyInfo.cs
-/media/patrixonix/HDD/VibeLoop/VibeLoop/app/mods/companions/repo/vibeloop-bridge/obj/Release/net48/VibeLoopBridge.csproj.CoreCompileInputs.cache
-/media/patrixonix/HDD/VibeLoop/VibeLoop/app/mods/companions/repo/vibeloop-bridge/obj/Release/net48/VibeLoopBridge.REPO.dll
