@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "vibeloop-bridge",
+  "version": "${version}",
+  "name": "VibeLoop Bridge",
+  "description": "Streams damage, deaths and level-ups to ~/.vibeloop/minecraft.jsonl for VibeLoop haptics. Client-side only.",
+  "authors": ["FullOfSense"],
+  "contact": {
+    "sources": "https://github.com/FullOfSense/VibeLoop"
+  },
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": ["app.vibeloop.bridge.VibeLoopBridge"]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "fabric-api": "*",
+    "minecraft": "~1.21"
+  }
+}

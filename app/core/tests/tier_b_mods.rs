@@ -119,6 +119,19 @@ fn tf2_attributes_kill_feed_lines() {
 }
 
 #[test]
+fn minecraft_reacts_to_bridge_events() {
+    let src = std::fs::read_to_string(mods_dir().join("minecraft.lua")).unwrap();
+    let (lua, calls) = load_mod(&src);
+    send(&lua, r#"{"e":"dmg","f":0.25}"#); // 2.5 hearts on 20 HP
+    send(&lua, r#"{"e":"died"}"#);
+    send(&lua, r#"{"e":"levelup","n":30}"#);
+    let p = pulses(&calls);
+    assert!(p.iter().any(|v| (0.6..0.7).contains(v)), "damage pulse: {p:?}");
+    assert!(p.iter().any(|v| *v >= 0.9), "death pulse: {p:?}");
+    assert!(p.iter().any(|v| (*v - 0.4).abs() < 0.01), "level-up pulse: {p:?}");
+}
+
+#[test]
 fn dst_parses_bridge_markers() {
     let src = std::fs::read_to_string(mods_dir().join("dont_starve_together.lua")).unwrap();
     let (lua, calls) = load_mod(&src);

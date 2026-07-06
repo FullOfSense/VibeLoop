@@ -98,3 +98,4 @@ viewer feels — mods never need to know whether a session is running.
 | `binding_of_isaac.lua` | The Binding of Isaac (bridge in `companions/isaac/`) | Heart damage scales the sting, boss kills and new floors reward |
 | `team_fortress2.lua` | Team Fortress 2 (`-condebug` launch option, set `MY_NICK` in the file) | Your kills reward (crits extra), your deaths sting |
 | `dont_starve_together.lua` | Don't Starve Together (client bridge in `companions/dst/`) | Hits buzz by health lost, death stings; works on any server |
+| `minecraft.lua` | Minecraft Java + Fabric (prebuilt bridge jar in `companions/minecraft/`) | Damage buzzes by hearts lost, death stings, level-ups reward; any launcher, any server |

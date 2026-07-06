@@ -184,12 +184,12 @@ VibeLoop source; they live under `mods/companions/`.
 | The Binding of Isaac | bridge mod → log.txt → `file` | ✅ shipped (`mods/companions/isaac/`) |
 | Team Fortress 2 | `-condebug` console.log → `file` | ✅ shipped (launch option only, no mod) |
 | Don't Starve Together | client bridge → client_log.txt → `file` | ✅ shipped (`mods/companions/dst/`) |
-| Minecraft | Fabric companion → `ws` | 🔜 tier C |
-| REPO | BepInEx companion → `ws` | 🔜 tier C |
-| Bloons TD 6 | Mod Helper companion → `ws` | 🔜 tier C |
-| Webfishing | GDWeave companion → `ws` | 🔜 tier C |
-| Deep Rock Galactic | companion feasibility open | 🔜 tier C |
-| Satisfactory | companion / dedicated-server API | 🔜 tier C |
+| Minecraft (Java, Fabric) | client bridge → `file` | ✅ shipped (`mods/companions/minecraft/`, prebuilt jar included) |
+| REPO | BepInEx companion → `file` | 🔜 needs the game's assemblies to compile against |
+| Bloons TD 6 | Mod Helper companion → `file` | 🔜 needs the game's assemblies to compile against |
+| Webfishing | GDWeave companion → `file` | 🔜 needs the game's assemblies to compile against |
+| Deep Rock Galactic | no scriptable channel found (UE pak mods can't do I/O) | ⚠️ investigating |
+| Satisfactory | dedicated-server API / SML companion | ⚠️ investigating |
 | Palworld | dedicated-server REST only | ⚠️ partial at best |
 | Sea of Thieves | none (anti-cheat, no API) | ❌ not moddable safely |
 | Crab Champions | none | ❌ no data channel |
