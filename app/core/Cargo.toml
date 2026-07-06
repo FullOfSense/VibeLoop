@@ -1,6 +1,6 @@
 [package]
 name = "vibeloop-core"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 
 [features]
@@ -29,6 +29,8 @@ futures-util = "0.3"
 blake3 = "1"
 rand = "0.8"
 data-encoding = "2"
+reqwest = { version = "0.13.4", default-features = false, features = ["rustls"] }
+rosc = "0.11.4"
 
 [dev-dependencies]
 tracing-subscriber = { workspace = true }

@@ -19,24 +19,24 @@
 //! ```
 //!
 //! The `vibe` API: `set(level)`, `pulse(level, seconds)`, `log(msg)`,
-//! `status(msg)`, `now()`. The engine handles WebSocket connect/reconnect for
-//! every declared source and reports source state to the UI, so mods contain
-//! zero networking or error-handling boilerplate.
+//! `status(msg)`, `now()`. The engine handles connect/reconnect and up/down
+//! reporting for every declared source (see [`crate::sources`] — WebSocket,
+//! HTTP polling, HTTP listener, OSC), so mods contain zero networking or
+//! error-handling boilerplate.
 
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result};
-use futures_util::StreamExt;
 use mlua::{Function, Lua, LuaOptions, LuaSerdeExt, StdLib, Table};
 use serde::Serialize;
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 
 use crate::bus::IntensityBus;
+use crate::sources::{self, SourceSpec};
 
 const TICK: Duration = Duration::from_millis(50);
-const RECONNECT_DELAY: Duration = Duration::from_secs(3);
 
 /// Metadata parsed from `-- @key: value` header comments, no code execution.
 #[derive(Debug, Clone, Serialize)]
@@ -196,17 +196,15 @@ pub async fn run_mod(
         .with_context(|| format!("mod '{mod_name}' has an error"))?;
 
     // ── Declared sources ──
-    let mut sources: Vec<(String, String)> = Vec::new();
+    let mut specs: Vec<SourceSpec> = Vec::new();
     if let Ok(table) = lua.globals().get::<Table>("sources") {
         for pair in table.sequence_values::<Table>() {
             let entry = pair?;
-            let id: String = entry.get("id").context("source needs an `id`")?;
-            let url: String = entry.get("url").context("source needs a `url`")?;
-            sources.push((id, url));
+            specs.push(sources::parse_spec(&entry)?);
         }
     }
     let has_tick = lua.globals().get::<Function>("on_tick").is_ok();
-    if sources.is_empty() && !has_tick {
+    if specs.is_empty() && !has_tick {
         anyhow::bail!(
             "mod '{mod_name}' declares no sources and no on_tick — nothing would ever happen"
         );
@@ -215,14 +213,8 @@ pub async fn run_mod(
     let cancel = CancellationToken::new();
     let (msg_tx, mut msg_rx) = mpsc::channel::<(String, String)>(256);
 
-    for (id, url) in &sources {
-        tokio::spawn(source_loop(
-            id.clone(),
-            url.clone(),
-            msg_tx.clone(),
-            events.clone(),
-            cancel.clone(),
-        ));
+    for spec in specs {
+        sources::spawn(spec, msg_tx.clone(), events.clone(), cancel.clone());
     }
 
     // ── Lua driver: owns the interpreter, feeds messages + ticks ──
@@ -271,67 +263,6 @@ pub async fn run_mod(
     });
 
     Ok(RunningMod { cancel })
-}
-
-/// Connects to one WebSocket source, forwards text frames, reconnects forever.
-/// When several frames are queued we keep only the freshest (game state
-/// snapshots supersede each other; stale ones just add latency).
-async fn source_loop(
-    id: String,
-    url: String,
-    msg_tx: mpsc::Sender<(String, String)>,
-    events: mpsc::UnboundedSender<ModEvent>,
-    cancel: CancellationToken,
-) {
-    let mut announced_down = false;
-    loop {
-        if cancel.is_cancelled() {
-            return;
-        }
-        let connect = tokio::select! {
-            _ = cancel.cancelled() => return,
-            c = tokio_tungstenite::connect_async(&url) => c,
-        };
-        match connect {
-            Ok((mut ws, _)) => {
-                let _ = events.send(ModEvent::SourceUp { source: id.clone() });
-                loop {
-                    let frame = tokio::select! {
-                        _ = cancel.cancelled() => return,
-                        f = ws.next() => f,
-                    };
-                    match frame {
-                        Some(Ok(msg)) if msg.is_text() => {
-                            let text = msg.into_text().map(|t| t.to_string()).unwrap_or_default();
-                            // Drop the queued frame if the mod is behind; the
-                            // next snapshot carries the full state anyway.
-                            let _ = msg_tx.try_send((id.clone(), text));
-                        }
-                        Some(Ok(_)) => {}
-                        Some(Err(_)) | None => break,
-                    }
-                }
-                let _ = events.send(ModEvent::SourceDown {
-                    source: id.clone(),
-                    detail: "connection lost — retrying".into(),
-                });
-                announced_down = true;
-            }
-            Err(e) => {
-                if !announced_down {
-                    let _ = events.send(ModEvent::SourceDown {
-                        source: id.clone(),
-                        detail: format!("can't reach {url} ({e}) — retrying"),
-                    });
-                    announced_down = true;
-                }
-            }
-        }
-        tokio::select! {
-            _ = cancel.cancelled() => return,
-            _ = tokio::time::sleep(RECONNECT_DELAY) => {}
-        }
-    }
 }
 
 #[cfg(test)]

@@ -35,7 +35,18 @@ Mods are Lua files, but they run in a sandbox: only the `math`, `string`,
 `io`, no `os`, no `require` — a downloaded mod cannot touch your files, run
 programs, or load native code. Its only outputs are vibration levels
 (clamped) and log lines. Game connections (the `sources` list) are opened by
-the app itself, not by mod code.
+the app itself, not by mod code, and are plainly visible at the top of the
+file.
+
+Source hardening:
+
+- `listen` (HTTP) and `osc` (UDP) sources bind **127.0.0.1 only** — nothing
+  on the network can feed a mod. Request bodies are capped (4 MB) and
+  malformed traffic is dropped, not parsed.
+- `poll` sources cap response sizes the same way; `insecure = true`
+  (self-signed certificates, needed for League of Legends' local API) is
+  refused for anything but loopback URLs, so a mod can't use it to talk to
+  the internet with TLS validation off.
 
 ## Sessions — hardened inputs
 

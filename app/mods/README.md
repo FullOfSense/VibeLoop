@@ -4,6 +4,9 @@ A mod is **one Lua file** in this folder. Drop it in, press 📂 in the app (or
 restart it), and it appears in the GAME MOD dropdown. No compilation, no
 packaging, no networking code.
 
+Want to connect a game that isn't here yet? Read the full guide:
+[`docs/MODDING.md`](../docs/MODDING.md).
+
 ## Anatomy
 
 ```lua
@@ -14,6 +17,9 @@ packaging, no networking code.
 
 -- Where the game data comes from. VibeLoop connects, reconnects, and reports
 -- status for every source automatically — mods never handle networking errors.
+-- Besides WebSockets there are three more source types: `poll` (local HTTP
+-- APIs like League/War Thunder), `listen` (games that POST to you, like CS2)
+-- and `osc` (VRChat) — see docs/MODDING.md for all fields.
 sources = {
   { id = "main", url = "ws://127.0.0.1:12345/game-data" },
 }
@@ -82,3 +88,8 @@ viewer feels — mods never need to know whether a session is running.
 | `demo_test.lua` | None — self-running | Repeating 24 s test pattern (pulses → ramp → spikes → wave → rest). Use it to verify toys and host/join sessions without any game |
 | `osu_rewarding.lua` | osu! stable & lazer, via [tosu](https://github.com/tosuapp/tosu) | Every hit buzzes, better = stronger; miss/fail hit hardest; win celebration scaled to accuracy |
 | `osu_punishing.lua` | osu! stable & lazer, via tosu | Good play = silence; meh hits tickle, misses sting, failing = full power |
+| `league_of_legends.lua` | League of Legends (built-in Live Client API, nothing to install) | Damage taken buzzes by % lost, kills reward, deaths sting, low HP hums, victory celebrates |
+| `war_thunder.lua` | War Thunder (built-in localhost API, nothing to install) | G-forces pull; battle-feed hits and kills buzz — set `MY_NICK` in the file to feel only your own |
+| `counterstrike2.lua` | Counter-Strike 2 (copy the cfg from `companions/cs2/` once) | Damage, kills, flashes, fire, bomb tension, round wins |
+| `vrchat.lua` | VRChat (enable OSC in-game) | An avatar float parameter — e.g. a Contact Receiver named `VibeLoop` — drives intensity directly |
+| `beat_saber.lua` | Beat Saber, via the DataPuller mod | Cuts tick, misses sting, combo milestones, low energy hums, finish celebrates by accuracy |
