@@ -41,11 +41,14 @@ your game ──▶ mod (one Lua file) ──▶ intensity engine ──▶ your
 
 ## Supported games
 
-| Game | Status | How |
-|---|---|---|
-| osu! (stable & lazer) | ✅ Ships with the app | [tosu](https://github.com/tosuapp/tosu) — two styles: **Rewarding** (every hit buzzes, better = stronger) and **Punishing** (good play = silence, mistakes buzz) |
-| League of Legends | 🔜 Planned | Live Client API |
-| Minecraft | 🔜 Planned | Fabric/Forge mod |
+14 games ship with the app: osu! (stable & lazer), League of Legends,
+War Thunder, Counter-Strike 2, VRChat, Beat Saber, Factorio, Balatro,
+The Binding of Isaac, Team Fortress 2, Don't Starve Together, Minecraft,
+R.E.P.O. and WEBFISHING — plus a self-running demo pattern for testing toys
+without a game. osu! and War Thunder also come in 🎁 **Rewarding** /
+😈 **Punishing** variants. Each mod's in-app setup checklist tells you if
+anything needs installing and does it in one click where possible. The
+full per-game table lives in [app/mods/README.md](app/mods/README.md).
 
 Adding a game = dropping **one Lua file** into the mods folder (📂 button in
 the app). No compiler, no packaging. Full API reference:

@@ -297,7 +297,7 @@ fn steps_for(ctx: &Ctx, mod_id: &str) -> Option<Vec<Step>> {
             },
         )],
 
-        "war_thunder" => vec![
+        "war_thunder" | "war_thunder_punishing" | "war_thunder_rewarding" => vec![
             step(
                 "api",
                 "ok",
@@ -310,9 +310,14 @@ fn steps_for(ctx: &Ctx, mod_id: &str) -> Option<Vec<Step>> {
             ),
             nick_step(
                 ctx,
-                "war_thunder.lua",
-                false,
-                "Without it you feel the whole battle feed, not just your own hits and kills.",
+                &format!("{mod_id}.lua"),
+                mod_id != "war_thunder",
+                if mod_id == "war_thunder" {
+                    "Without it you feel the whole battle feed, not just your own hits and kills."
+                } else {
+                    "This variant needs to tell YOUR shots and hits apart from the rest of the \
+                     battle feed — that only works with your exact nickname."
+                },
             ),
         ],
 

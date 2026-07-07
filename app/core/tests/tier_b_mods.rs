@@ -184,6 +184,42 @@ fn war_thunder_feels_tank_battles() {
 }
 
 #[test]
+fn war_thunder_variants_know_whose_hit_it_was() {
+    // The feed lists attacker BEFORE the verb, victim AFTER. With MY_NICK
+    // set, punishing must slam incoming hits and shrug at your kills, and
+    // rewarding must purr at your hits and ignore incoming ones entirely.
+    let feed = concat!(
+        r#"{"damage":["#,
+        r#"{"id":1,"msg":"FullOfSense (Leopard 2A4) damaged Foe (T-72A)"},"#,
+        r#"{"id":2,"msg":"Foe (T-72A) critically damaged FullOfSense (Leopard 2A4)"},"#,
+        r#"{"id":3,"msg":"FullOfSense (Leopard 2A4) destroyed Foe (T-72A)"},"#,
+        r#"{"id":4,"msg":"Foe2 (T-80B) destroyed FullOfSense (Leopard 2A4)"},"#,
+        r#"{"id":5,"msg":"Other (M1) destroyed Bystander (Object 279)"}"#,
+        r#"]}"#
+    );
+    for (file, expected) in [
+        // (your hit, hit on you, your kill, your death; bystanders silent)
+        ("war_thunder_punishing.lua", vec![0.2, 0.8, 0.35, 1.0]),
+        ("war_thunder_rewarding.lua", vec![0.25, 0.5]),
+    ] {
+        let src = std::fs::read_to_string(mods_dir().join(file))
+            .unwrap()
+            .replace("local MY_NICK = \"\"", "local MY_NICK = \"FullOfSense\"");
+        let (lua, calls) = load_mod(&src);
+        let send_to = |source: &str, json: &str| {
+            let value: serde_json::Value = serde_json::from_str(json).unwrap();
+            let on_message: mlua::Function = lua.globals().get("on_message").unwrap();
+            on_message.call::<()>((source, lua.to_value(&value).unwrap())).unwrap();
+        };
+        // Prime on an empty battle start, then deliver the five events.
+        send_to("feed", r#"{"damage":[]}"#);
+        send_to("feed", feed);
+        let p = pulses(&calls);
+        assert_eq!(p, expected, "{file}: wrong pulses");
+    }
+}
+
+#[test]
 fn dst_parses_bridge_markers() {
     let src = std::fs::read_to_string(mods_dir().join("dont_starve_together.lua")).unwrap();
     let (lua, calls) = load_mod(&src);
