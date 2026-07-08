@@ -8,6 +8,9 @@ sources = {
   {
     id = "log",
     type = "file",
+    -- Fast tail: scoring pops ride the count-up animation, so read the
+    -- bridge file at 10 Hz to keep buzz-to-animation lag imperceptible.
+    interval = 0.1,
     paths = {
       "${APPDATA}/Balatro/vibeloop.jsonl",
       -- Proton on Linux: found in whichever Steam library holds the game.

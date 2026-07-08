@@ -79,6 +79,11 @@ sources = {
       "${STEAM_LIBRARIES}/common/Team Fortress 2/tf/console.log",
       "${STEAM_LIBRARIES}/compatdata/2379780/pfx/drive_c/users/steamuser/AppData/Roaming/Balatro/vibeloop.jsonl",
   } },
+
+  -- `interval` (seconds, default 0.25, clamped to 0.05–30) sets how often
+  -- the file is checked for new lines — lower it when the haptics must
+  -- track an on-screen animation closely (Balatro uses 0.1).
+  { id = "log3", type = "file", interval = 0.1, path = "~/game/events.jsonl" },
 }
 ```
 

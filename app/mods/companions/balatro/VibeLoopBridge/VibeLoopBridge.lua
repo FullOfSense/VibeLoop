@@ -59,13 +59,26 @@ end
 if type(card_eval_status_text) == "function" then
   local orig_cest = card_eval_status_text
   function card_eval_status_text(card, eval_type, amt, ...)
-    pcall(function()
-      emit({
-        e = "cardpop",
-        t = tostring(eval_type or "?"),
-        amt = tonumber(amt) or 0,
-      })
+    -- card_eval_status_text runs during hand CALCULATION; the pop it
+    -- shows is queued into the game's animation event queue. Queue our
+    -- emit into that same queue, just ahead of the visual it belongs to:
+    -- it then fires in the pop's own animation slot, in lockstep with
+    -- what's on screen (and it respects the player's game-speed setting).
+    local t = tostring(eval_type or "?")
+    local a = tonumber(amt) or 0
+    local queued = pcall(function()
+      assert(G and G.E_MANAGER and Event)
+      G.E_MANAGER:add_event(Event({
+        trigger = "immediate",
+        func = function()
+          emit({ e = "cardpop", t = t, amt = a })
+          return true
+        end,
+      }))
     end)
+    if not queued then
+      pcall(function() emit({ e = "cardpop", t = t, amt = a }) end)
+    end
     return orig_cest(card, eval_type, amt, ...)
   end
 end

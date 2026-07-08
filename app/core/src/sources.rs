@@ -55,7 +55,7 @@ pub enum SourceKind {
     Osc { port: u16 },
     /// Candidate paths (OS-dependent install locations); the first one that
     /// exists gets tailed.
-    File { paths: Vec<String> },
+    File { paths: Vec<String>, interval: Duration },
 }
 
 /// Parses one Lua source entry. `type` may be omitted for `ws`/`poll` —
@@ -124,7 +124,13 @@ pub fn parse_spec(entry: &mlua::Table) -> Result<SourceSpec> {
             }
             let paths =
                 expand_steam_candidates(paths, &crate::steam::steamapps_dirs());
-            SourceKind::File { paths }
+            let interval: f64 = entry.get("interval").ok().flatten().unwrap_or(0.25);
+            let interval = if interval.is_finite() {
+                Duration::from_secs_f64(interval.clamp(0.05, 30.0))
+            } else {
+                Duration::from_millis(250)
+            };
+            SourceKind::File { paths, interval }
         }
         other => bail!(
             "source '{id}': unknown type '{other}' (expected ws, poll, listen, osc or file)"
@@ -174,8 +180,8 @@ pub fn spawn(
         SourceKind::Osc { port } => {
             tokio::spawn(osc_loop(spec.id, port, msg_tx, events, cancel));
         }
-        SourceKind::File { paths } => {
-            tokio::spawn(file_loop(spec.id, paths, msg_tx, events, cancel));
+        SourceKind::File { paths, interval } => {
+            tokio::spawn(file_loop(spec.id, paths, interval, msg_tx, events, cancel));
         }
     }
 }
@@ -242,6 +248,7 @@ fn expand_path(raw: &str) -> String {
 async fn file_loop(
     id: String,
     paths: Vec<String>,
+    interval: Duration,
     msg_tx: mpsc::Sender<(String, String)>,
     events: mpsc::UnboundedSender<ModEvent>,
     cancel: CancellationToken,
@@ -289,7 +296,7 @@ async fn file_loop(
         loop {
             tokio::select! {
                 _ = cancel.cancelled() => return,
-                _ = tokio::time::sleep(Duration::from_millis(250)) => {}
+                _ = tokio::time::sleep(interval) => {}
             }
             let len = match tokio::fs::metadata(&path).await {
                 Ok(m) => m.len(),
