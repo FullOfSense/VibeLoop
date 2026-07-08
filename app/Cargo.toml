@@ -15,3 +15,10 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 lto = true
 codegen-units = 1
 strip = true
+
+# Vendored with one fix: always run BLE service discovery on connect, even
+# when BlueZ still holds a connection from a previous app run (upstream skips
+# it then and fails with InvalidEndpoint("rx") on every quick app restart).
+# Drop once upstream buttplug releases a fix.
+[patch.crates-io]
+buttplug_server_hwmgr_btleplug = { path = "vendor/buttplug_server_hwmgr_btleplug" }

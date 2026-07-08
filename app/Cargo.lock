@@ -741,8 +741,6 @@ dependencies = [
 [[package]]
 name = "buttplug_server_hwmgr_btleplug"
 version = "10.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "47666fbac067df699e0206f3fcf0c000d963b25e8adadc6554fc098b8c21dd1c"
 dependencies = [
  "async-trait",
  "btleplug",
@@ -7468,7 +7466,7 @@ checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
 
 [[package]]
 name = "vibeloop"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "anyhow",
  "serde",
@@ -7483,7 +7481,7 @@ dependencies = [
 
 [[package]]
 name = "vibeloop-core"
-version = "0.7.0"
+version = "0.7.1"
 dependencies = [
  "anyhow",
  "blake3",
