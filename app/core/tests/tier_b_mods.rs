@@ -270,6 +270,50 @@ fn war_thunder_variants_know_whose_hit_it_was() {
 }
 
 #[test]
+fn cs2_variants_feel_the_right_things() {
+    // A GSI payload builder: hp, ak clip, round phase (+ winner).
+    let payload = |hp: i64, clip: i64, phase: &str, winner: &str| {
+        let round = if phase == "over" {
+            format!(r#"{{"phase":"over","win_team":"{winner}"}}"#)
+        } else {
+            format!(r#"{{"phase":"{phase}"}}"#)
+        };
+        format!(
+            r#"{{"provider":{{"steamid":"765"}},"round":{round},
+              "player":{{"steamid":"765","team":"CT",
+                "state":{{"health":{hp},"round_kills":0,"flashed":0,"burning":0}},
+                "weapons":{{"weapon_1":{{"name":"weapon_ak47","state":"active","ammo_clip":{clip}}}}}}}}}"#
+        )
+    };
+    for (file, expected) in [
+        // Rewarding: 3-round burst 0.15+0.12, 25 damage tap, soft death
+        // 0.3, round-loss nod 0.25 (fires once despite two "over" posts).
+        ("counterstrike2_rewarding.lua", vec![0.27, 0.2125, 0.3, 0.25]),
+        // Punishing: shots and damage silent; death 1.0, round loss 0.8.
+        ("counterstrike2_punishing.lua", vec![1.0, 0.8]),
+    ] {
+        let src = std::fs::read_to_string(mods_dir().join(file)).unwrap();
+        let (lua, calls) = load_mod(&src);
+        let send_to = |json: &str| {
+            let value: serde_json::Value = serde_json::from_str(json).unwrap();
+            let on_message: mlua::Function = lua.globals().get("on_message").unwrap();
+            on_message.call::<()>(("gsi", lua.to_value(&value).unwrap())).unwrap();
+        };
+        send_to(&payload(100, 30, "live", ""));  // baseline
+        send_to(&payload(100, 27, "live", ""));  // 3-round burst
+        send_to(&payload(75, 27, "live", ""));   // took 25 damage
+        send_to(&payload(0, 27, "live", ""));    // died
+        send_to(&payload(0, 27, "over", "T"));   // round lost...
+        send_to(&payload(0, 27, "over", "T"));   // ...posted twice
+        let p = pulses(&calls);
+        assert_eq!(p.len(), expected.len(), "{file}: pulse count, got {p:?}");
+        for (got, want) in p.iter().zip(&expected) {
+            assert!((got - want).abs() < 0.001, "{file}: expected {expected:?}, got {p:?}");
+        }
+    }
+}
+
+#[test]
 fn dst_parses_bridge_markers() {
     let src = std::fs::read_to_string(mods_dir().join("dont_starve_together.lua")).unwrap();
     let (lua, calls) = load_mod(&src);

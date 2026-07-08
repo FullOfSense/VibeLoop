@@ -321,7 +321,7 @@ fn steps_for(ctx: &Ctx, mod_id: &str) -> Option<Vec<Step>> {
             ),
         ],
 
-        "counterstrike2" => {
+        "counterstrike2" | "counterstrike2_rewarding" | "counterstrike2_punishing" => {
             let game = ctx.steam_game(730, "Counter-Strike Global Offensive");
             vec![match &game {
                 Some(g) => {

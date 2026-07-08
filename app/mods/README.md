@@ -100,6 +100,8 @@ viewer feels — mods never need to know whether a session is running.
 | `war_thunder_punishing.lua` | War Thunder (same API; `MY_NICK` required) | 😈 Only pain: crew losses and enemy shells slam, ramming hurts by impact, dying is full power; your own shots and kills are silent |
 | `war_thunder_rewarding.lua` | War Thunder (same API; `MY_NICK` required) | 🎁 Gun-ready thump when your reload finishes, ramming jolts by impact, your hits tap, kills wave; taking damage only tickles |
 | `counterstrike2.lua` | Counter-Strike 2 (copy the cfg from `companions/cs2/` once) | Damage, kills, flashes, fire, bomb tension, round wins |
+| `counterstrike2_rewarding.lua` | Counter-Strike 2 (same cfg) | 🎁 Every trigger pull patters (spray = rattle), kills reward with streaks, round ends celebrate; damage and death only tickle |
+| `counterstrike2_punishing.lua` | Counter-Strike 2 (same cfg) | 😈 Silence while you play — dying slams full power, losing the round hits hard, nothing else gets through |
 | `vrchat.lua` | VRChat (enable OSC in-game) | An avatar float parameter — e.g. a Contact Receiver named `VibeLoop` — drives intensity directly |
 | `beat_saber.lua` | Beat Saber, via the DataPuller mod | Cuts tick, misses sting, combo milestones, low energy hums, finish celebrates by accuracy |
 | `factorio.lua` | Factorio (bridge mod in `companions/factorio/`) | Damage buzzes, deaths sting, research rewards, rocket launches celebrate |
