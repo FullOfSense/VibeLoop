@@ -82,10 +82,31 @@ fn balatro_reacts_to_bridge_events() {
     send(&lua, r#"{"e":"score","chips":300,"target":600}"#);
     send(&lua, r#"{"e":"state","s":"ROUND_EVAL","boss":true}"#);
     send(&lua, r#"{"e":"state","s":"GAME_OVER","boss":false}"#);
+    // Per-action events: play commit, three scoring pops, a 4-card
+    // discard, a draw and a tarot use.
+    send(&lua, r#"{"e":"play","n":2}"#);
+    for _ in 0..3 {
+        send(&lua, r#"{"e":"pop","chips":45,"mult":4}"#);
+    }
+    send(&lua, r#"{"e":"discard","n":4}"#);
+    send(&lua, r#"{"e":"draw"}"#);
+    send(&lua, r#"{"e":"use"}"#);
     let p = pulses(&calls);
     assert!(p.iter().any(|v| (0.35..0.5).contains(v)), "half-progress score pulse: {p:?}");
     assert!(p.iter().any(|v| (*v - 0.85).abs() < 0.01), "boss blind pulse: {p:?}");
     assert!(p.iter().any(|v| (*v - 0.9).abs() < 0.01), "game over pulse: {p:?}");
+    assert_eq!(
+        p.iter().filter(|v| (**v - 0.18).abs() < 0.001).count(),
+        3,
+        "three scoring pops must each tick: {p:?}"
+    );
+    assert!(p.iter().any(|v| (*v - 0.32).abs() < 0.001), "4-card discard pulse: {p:?}");
+    assert!(p.iter().any(|v| (*v - 0.12).abs() < 0.001), "draw tap: {p:?}");
+    assert_eq!(
+        p.iter().filter(|v| (**v - 0.3).abs() < 0.001).count(),
+        2,
+        "play commit and tarot use both pulse 0.3: {p:?}"
+    );
 }
 
 #[test]

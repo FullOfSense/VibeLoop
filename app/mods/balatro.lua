@@ -1,6 +1,6 @@
 -- @name: Balatro — Balanced
 -- @game: Balatro
--- @description: Scoring builds with the hand, blind wins reward (bosses more), game over stings, money tickles.
+-- @description: Every action buzzes — each scoring pop ticks in a cascade, draws and discards tap, blind wins reward (bosses more), game over stings.
 -- @setup: Install Steamodded + the VibeLoopBridge mod from mods/companions/balatro/ into your Balatro Mods folder.
 
 -- The bridge writes JSON lines to vibeloop.jsonl in Balatro's save folder.
@@ -28,6 +28,20 @@ function on_message(source, data)
     -- so a colossal overshoot doesn't slam full power.
     local progress = num(data.chips, 0) / math.max(num(data.target, 1), 1)
     vibe.pulse(math.min(0.15 + progress * 0.55, 0.8), 0.35)
+  elseif data.e == "pop" then
+    -- One tick per chip/mult pop while the hand scores — a big hand with
+    -- retriggers becomes a rapid cascade on its own.
+    vibe.pulse(0.18, 0.1)
+  elseif data.e == "play" then
+    vibe.pulse(0.3, 0.2)
+  elseif data.e == "draw" then
+    -- One soft tap per card dealt to your hand.
+    vibe.pulse(0.12, 0.08)
+  elseif data.e == "discard" then
+    vibe.pulse(math.min(0.2 + num(data.n, 1) * 0.03, 0.35), 0.2)
+  elseif data.e == "use" then
+    -- Tarot / planet / spectral used.
+    vibe.pulse(0.3, 0.25)
   elseif data.e == "money" then
     if num(data.d, 0) > 0 then
       vibe.pulse(0.2, 0.12)

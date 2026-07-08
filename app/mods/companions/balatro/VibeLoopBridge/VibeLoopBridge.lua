@@ -46,6 +46,67 @@ local function state_name(s)
   return state_names[s] or tostring(s)
 end
 
+-- ── Per-action hooks ─────────────────────────────────────────────────────
+-- All defensive: only installed if the target exists, and the emit side is
+-- wrapped so a bridge bug can never break the game.
+
+-- Scoring pops: update_hand_text fires for every chip/mult change while a
+-- hand is evaluated. Gate on HAND_PLAYED — the same function also animates
+-- the score preview while you're still selecting cards.
+if type(update_hand_text) == "function" then
+  local orig_uht = update_hand_text
+  function update_hand_text(config, vals)
+    pcall(function()
+      if G and G.STATES and G.STATE == G.STATES.HAND_PLAYED
+        and type(vals) == "table" then
+        local chips = tonumber(vals.chips)
+        local mult = tonumber(vals.mult)
+        if chips or mult then
+          emit({ e = "pop", chips = chips or -1, mult = mult or -1 })
+        end
+      end
+    end)
+    return orig_uht(config, vals)
+  end
+end
+
+-- Each card dealt into your hand.
+if type(draw_card) == "function" then
+  local orig_draw = draw_card
+  function draw_card(from, to, ...)
+    pcall(function()
+      if G and to == G.hand then emit({ e = "draw" }) end
+    end)
+    return orig_draw(from, to, ...)
+  end
+end
+
+-- Play / discard button presses, with how many cards were committed.
+local function hook_action(name, event)
+  if G and G.FUNCS and type(G.FUNCS[name]) == "function" then
+    local orig = G.FUNCS[name]
+    G.FUNCS[name] = function(...)
+      pcall(function()
+        local n = (G.hand and G.hand.highlighted and #G.hand.highlighted) or 0
+        emit({ e = event, n = n })
+      end)
+      return orig(...)
+    end
+  end
+end
+hook_action("play_cards_from_highlighted", "play")
+hook_action("discard_cards_from_highlighted", "discard")
+
+-- Consumable use (tarot/planet/spectral) — costs no money, so the money
+-- watcher below never sees it.
+if G and G.FUNCS and type(G.FUNCS.use_card) == "function" then
+  local orig_use = G.FUNCS.use_card
+  G.FUNCS.use_card = function(...)
+    pcall(function() emit({ e = "use" }) end)
+    return orig_use(...)
+  end
+end
+
 local orig_update = Game.update
 function Game:update(dt)
   orig_update(self, dt)
