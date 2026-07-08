@@ -12,9 +12,10 @@
 --       hurts here too, scaled by the speed the impact ate
 --   /hudmsg — the battle feed; attacker is named BEFORE the verb, victim
 --       AFTER, so MY_NICK tells incoming fire from everything else
--- NOT in the official API (verified absent): sub-damage machine-gun
--- sprinkle and near-misses that don't hurt you — if it took crew, we feel
--- it; if the game didn't register damage, there is nothing to read.
+-- NOT in the official API (verified absent, 20 Hz capture): sub-damage
+-- machine-gun sprinkle, hit markers, and any hit — artillery included —
+-- that neither kills a crew member nor makes the battle feed. If it took
+-- crew, we feel it; otherwise there is nothing to read.
 sources = {
   { id = "state", url = "http://127.0.0.1:8111/state", interval = 0.2 },
   { id = "ind", url = "http://127.0.0.1:8111/indicators", interval = 0.2 },

@@ -98,7 +98,7 @@ viewer feels — mods never need to know whether a session is running.
 | `league_of_legends.lua` | League of Legends (built-in Live Client API, nothing to install) | Damage taken buzzes by % lost, kills reward, deaths sting, low HP hums, victory celebrates |
 | `war_thunder.lua` | War Thunder (built-in localhost API, nothing to install) | G-forces pull; battle-feed hits and kills buzz — set `MY_NICK` in the file to feel only your own |
 | `war_thunder_punishing.lua` | War Thunder (same API; `MY_NICK` required) | 😈 Only pain: crew losses and enemy shells slam, ramming hurts by impact, dying is full power; your own shots and kills are silent |
-| `war_thunder_rewarding.lua` | War Thunder (same API; `MY_NICK` required) | 🎁 Cannon shots thump, ramming jolts by impact, your hits tap, kills wave; taking damage only tickles |
+| `war_thunder_rewarding.lua` | War Thunder (same API; `MY_NICK` required) | 🎁 Gun-ready thump when your reload finishes, ramming jolts by impact, your hits tap, kills wave; taking damage only tickles |
 | `counterstrike2.lua` | Counter-Strike 2 (copy the cfg from `companions/cs2/` once) | Damage, kills, flashes, fire, bomb tension, round wins |
 | `vrchat.lua` | VRChat (enable OSC in-game) | An avatar float parameter — e.g. a Contact Receiver named `VibeLoop` — drives intensity directly |
 | `beat_saber.lua` | Beat Saber, via the DataPuller mod | Cuts tick, misses sting, combo milestones, low energy hums, finish celebrates by accuracy |

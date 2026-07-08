@@ -1,13 +1,17 @@
 -- @name: War Thunder — Rewarding 🎁
 -- @game: War Thunder
--- @description: Feel everything YOU do — cannon shots thump, ramming jolts by impact speed, your hits tap, kills send a warm wave. Taking damage only tickles.
+-- @description: Feel everything YOU do — a thump the instant your gun is reloaded and ready, ramming jolts by impact speed, your hits tap, kills send a warm wave. Taking damage only tickles.
 -- @setup: Put your in-game nickname in MY_NICK inside this file — it's how the mod picks YOUR shots out of the battle feed.
 
 -- Built-in localhost API (http://127.0.0.1:8111). Field behaviour verified
 -- against a live tank test drive:
 --   /indicators (tanks, 5 Hz here):
---     first_stage_ammo DROPS by 1 the moment the cannon fires (an increase
---       is the rack replenishing — ignored)
+--     first_stage_ammo DROPS ~9 s AFTER firing, when the loader chambers
+--       the next round — on breech-loaded tanks it is a RELOAD-COMPLETE
+--       signal, not a fire signal (verified at 20 Hz: the trigger pull
+--       itself changes nothing in the API). The thump = "gun ready".
+--       On autoloaders the drop may coincide with the shot. An increase
+--       is the hull rack replenishing — ignored.
 --     speed collapsing >15 km/h in one poll = you rammed something (hard
 --       braking measured ~6 km/h per poll, a wall hit ~30+)
 --     crew_current DROPS when a hit knocks out a crew member — including
@@ -15,8 +19,11 @@
 --   /state — flight-only; gives aircraft the gentle G-pull
 --   /hudmsg — the battle feed; attacker is named BEFORE the verb, victim
 --       AFTER, so MY_NICK tells your shots from everyone else's
--- NOT in the official API (verified absent): machine-gun bursts, smoke
--- deployment, and near-miss artillery/bombs that don't damage you.
+-- NOT in the official API (verified absent, 20 Hz capture): the fire
+-- moment on breech-loaded tanks, machine-gun bursts, smoke deployment,
+-- your hit markers (the feed only reports crits/kills), and any damage —
+-- yours or incoming, artillery included — that doesn't kill a crew member
+-- or make the battle feed.
 sources = {
   { id = "state", url = "http://127.0.0.1:8111/state", interval = 0.2 },
   { id = "ind", url = "http://127.0.0.1:8111/indicators", interval = 0.2 },
@@ -75,7 +82,9 @@ function on_message(source, data)
     end
   elseif source == "ind" then
     if data.valid == true then
-      -- Cannon shot: the ready rack lost a shell.
+      -- Gun ready: the loader just chambered the next round (this is
+      -- the closest to "shot feedback" the API offers on breech-loaded
+      -- tanks; on autoloaders it lands at the shot itself).
       local ammo = data.first_stage_ammo
       if type(ammo) == "number" then
         if last_ammo and ammo < last_ammo then
