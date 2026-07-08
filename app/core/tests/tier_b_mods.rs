@@ -228,10 +228,22 @@ fn war_thunder_variants_know_whose_hit_it_was() {
         r#"{"id":5,"msg":"Other (M1) destroyed Bystander (Object 279)"}"#,
         r#"]}"#
     );
+    // Indicator sequence: baseline → cannon shot (ammo 6→5) → crew loss
+    // (4→3) → wall ram (speed 33→1, impact 32) → rack reload (5→6, silent).
+    let ind = [
+        r#"{"valid":true,"army":"tank","first_stage_ammo":6,"crew_current":4,"speed":33}"#,
+        r#"{"valid":true,"army":"tank","first_stage_ammo":5,"crew_current":4,"speed":33}"#,
+        r#"{"valid":true,"army":"tank","first_stage_ammo":5,"crew_current":3,"speed":33}"#,
+        r#"{"valid":true,"army":"tank","first_stage_ammo":5,"crew_current":3,"speed":1}"#,
+        r#"{"valid":true,"army":"tank","first_stage_ammo":6,"crew_current":3,"speed":1}"#,
+    ];
     for (file, expected) in [
-        // (your hit, hit on you, your kill, your death; bystanders silent)
-        ("war_thunder_punishing.lua", vec![0.2, 0.8, 0.35, 1.0]),
-        ("war_thunder_rewarding.lua", vec![0.25, 0.5]),
+        // Punishing: your hit/kill silent; crit on you 0.8, death 1.0;
+        // crew loss 0.85; ram 0.4 + 32/60*0.4.
+        ("war_thunder_punishing.lua", vec![0.8, 1.0, 0.85, 0.4 + 32.0 / 60.0 * 0.4]),
+        // Rewarding: your hit 0.25, damage tickle 0.2, kill 0.5, death
+        // tickle 0.2; shot 0.35, crew loss 0.2, ram 0.2 + 32/60*0.3.
+        ("war_thunder_rewarding.lua", vec![0.25, 0.2, 0.5, 0.2, 0.35, 0.2, 0.2 + 32.0 / 60.0 * 0.3]),
     ] {
         let src = std::fs::read_to_string(mods_dir().join(file))
             .unwrap()
@@ -242,11 +254,18 @@ fn war_thunder_variants_know_whose_hit_it_was() {
             let on_message: mlua::Function = lua.globals().get("on_message").unwrap();
             on_message.call::<()>((source, lua.to_value(&value).unwrap())).unwrap();
         };
-        // Prime on an empty battle start, then deliver the five events.
+        // Prime on an empty battle start, then deliver the five feed
+        // events, then the indicator sequence.
         send_to("feed", r#"{"damage":[]}"#);
         send_to("feed", feed);
+        for payload in &ind {
+            send_to("ind", payload);
+        }
         let p = pulses(&calls);
-        assert_eq!(p, expected, "{file}: wrong pulses");
+        assert_eq!(p.len(), expected.len(), "{file}: pulse count, got {p:?}");
+        for (got, want) in p.iter().zip(&expected) {
+            assert!((got - want).abs() < 0.001, "{file}: expected {expected:?}, got {p:?}");
+        }
     }
 }
 
