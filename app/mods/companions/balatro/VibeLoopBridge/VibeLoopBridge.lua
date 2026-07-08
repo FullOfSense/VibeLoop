@@ -50,23 +50,23 @@ end
 -- All defensive: only installed if the target exists, and the emit side is
 -- wrapped so a bridge bug can never break the game.
 
--- Scoring pops: update_hand_text fires for every chip/mult change while a
--- hand is evaluated. Gate on HAND_PLAYED — the same function also animates
--- the score preview while you're still selecting cards.
-if type(update_hand_text) == "function" then
-  local orig_uht = update_hand_text
-  function update_hand_text(config, vals)
+-- Scoring pops, at ANIMATION time. Balatro computes the whole hand in one
+-- frame and then plays the count-up back from an event queue, so hooking
+-- the calculation (update_hand_text) clumps every pop into one instant.
+-- card_eval_status_text is what runs the moment a card lifts and shows its
+-- floating "+X" — hooking it puts each buzz exactly on the visible pop.
+-- eval_type: chips / mult / x_mult / dollars / extra / jokers…
+if type(card_eval_status_text) == "function" then
+  local orig_cest = card_eval_status_text
+  function card_eval_status_text(card, eval_type, amt, ...)
     pcall(function()
-      if G and G.STATES and G.STATE == G.STATES.HAND_PLAYED
-        and type(vals) == "table" then
-        local chips = tonumber(vals.chips)
-        local mult = tonumber(vals.mult)
-        if chips or mult then
-          emit({ e = "pop", chips = chips or -1, mult = mult or -1 })
-        end
-      end
+      emit({
+        e = "cardpop",
+        t = tostring(eval_type or "?"),
+        amt = tonumber(amt) or 0,
+      })
     end)
-    return orig_uht(config, vals)
+    return orig_cest(card, eval_type, amt, ...)
   end
 end
 

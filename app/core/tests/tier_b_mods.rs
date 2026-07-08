@@ -91,7 +91,17 @@ fn balatro_reacts_to_bridge_events() {
     send(&lua, r#"{"e":"discard","n":4}"#);
     send(&lua, r#"{"e":"draw"}"#);
     send(&lua, r#"{"e":"use"}"#);
+    // The count-up: play resets the combo, then each cardpop escalates.
+    // chips amt=30 → 0.15+0.12 base, +0.02 combo = 0.29; x_mult → 0.30
+    // base +0.04 = 0.34; mult → 0.22 base +0.06 = 0.28.
+    send(&lua, r#"{"e":"play","n":5}"#);
+    send(&lua, r#"{"e":"cardpop","t":"chips","amt":30}"#);
+    send(&lua, r#"{"e":"cardpop","t":"x_mult","amt":3}"#);
+    send(&lua, r#"{"e":"cardpop","t":"mult","amt":4}"#);
     let p = pulses(&calls);
+    assert!(p.iter().any(|v| (*v - 0.29).abs() < 0.001), "chip cardpop scales with amt: {p:?}");
+    assert!(p.iter().any(|v| (*v - 0.34).abs() < 0.001), "x_mult cardpop escalated: {p:?}");
+    assert!(p.iter().any(|v| (*v - 0.28).abs() < 0.001), "mult cardpop escalated: {p:?}");
     assert!(p.iter().any(|v| (0.35..0.5).contains(v)), "half-progress score pulse: {p:?}");
     assert!(p.iter().any(|v| (*v - 0.85).abs() < 0.01), "boss blind pulse: {p:?}");
     assert!(p.iter().any(|v| (*v - 0.9).abs() < 0.01), "game over pulse: {p:?}");
@@ -104,8 +114,8 @@ fn balatro_reacts_to_bridge_events() {
     assert!(p.iter().any(|v| (*v - 0.12).abs() < 0.001), "draw tap: {p:?}");
     assert_eq!(
         p.iter().filter(|v| (**v - 0.3).abs() < 0.001).count(),
-        2,
-        "play commit and tarot use both pulse 0.3: {p:?}"
+        3,
+        "two play commits and the tarot use each pulse 0.3: {p:?}"
     );
 }
 
